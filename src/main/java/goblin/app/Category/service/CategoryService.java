@@ -1,2 +1,3 @@
-package goblin.app.Category.service;public class CategoryService {
-}
+// package goblin.app.Category.service;
+//
+// public class CategoryService {}

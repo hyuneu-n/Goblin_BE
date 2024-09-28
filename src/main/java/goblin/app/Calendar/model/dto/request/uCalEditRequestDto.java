@@ -1,4 +1,3 @@
-package goblin.app.Calendar.model.dto.request;
-
-public class uCalEditRequestDto {
-}
+// package goblin.app.Calendar.model.dto.request;
+//
+// public class uCalEditRequestDto {}

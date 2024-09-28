@@ -1,0 +1,122 @@
+package goblin.app.User.service;
+
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
+import goblin.app.Common.exception.CustomValidationException;
+import goblin.app.User.model.dto.UserRegistrationResponseDTO;
+import goblin.app.User.model.entity.User;
+import goblin.app.User.repository.UserRepository;
+import goblin.app.User.util.JwtUtil;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class UserService implements UserDetailsService {
+  private final UserRepository userRepository;
+  private final PasswordEncoder passwordEncoder;
+  private final JwtUtil jwtUtil;
+
+  // 회원가입 비지니스 로직
+  public UserRegistrationResponseDTO registerUser(
+      String loginId, String password, String username) {
+
+    Map<String, String> errors = new HashMap<>(); // 오류를 담을 맵
+
+    // 이름 한글 검증
+    if (!username.matches("^[가-힣]+$")) {
+      errors.put("username", "이름은 한글만 입력 가능합니다.");
+    }
+
+    // 아이디 길이 검증 (8자 이상)
+    if (loginId.length() < 8) {
+      errors.put("loginId", "아이디는 8자 이상이어야 합니다.");
+    }
+
+    // 비밀번호 길이 검증 (10자 이상)
+    if (password.length() < 10) {
+      errors.put("password", "비밀번호는 10자 이상이어야 합니다.");
+    }
+
+    // 오류가 있을 경우 예외 던지기
+    if (!errors.isEmpty()) {
+      throw new CustomValidationException(errors);
+    }
+
+    // 새로운 사용자 생성
+    User user = new User();
+    user.setLoginId(loginId);
+    user.setLoginPw(passwordEncoder.encode(password));
+    user.setUserRole("ROLE_USER");
+    user.setUsername(username);
+
+    // User 정보 DB에 저장
+    User savedUser = userRepository.save(user);
+    log.info("회원가입 성공: 사용자 ID - {}, 닉네임 - {}", savedUser.getLoginId(), savedUser.getUsername());
+
+    // 응답 DTO 생성 및 반환
+    return new UserRegistrationResponseDTO(
+        savedUser.getUsername(), savedUser.getLoginId(), "회원가입이 성공적으로 완료되었습니다.");
+  }
+
+  public boolean isLoginIdAvailable(String loginId) {
+    return !userRepository.findByLoginId(loginId).isPresent();
+  }
+
+  // 로그인 로직
+  public String loginUser(String loginId, String password) {
+    User user =
+        userRepository
+            .findByLoginId(loginId)
+            .orElseThrow(() -> new RuntimeException("Invalid login ID or password"));
+
+    if (!passwordEncoder.matches(password, user.getLoginPw())) {
+      log.warn("로그인 실패: 잘못된 비밀번호 - 사용자 ID {}", loginId);
+      throw new RuntimeException("Invalid login ID or password");
+    }
+
+    return jwtUtil.createAccessToken(user.getLoginId(), user.getUsername(), user.getUserRole());
+  }
+
+  public User saveRefreshToken(String loginId, String refreshToken) {
+    User user =
+        userRepository
+            .findByLoginId(loginId)
+            .orElseThrow(() -> new RuntimeException("User not found"));
+    user.setRefreshToken(refreshToken);
+    return userRepository.save(user);
+  }
+
+  public User findUserByLoginId(String loginId) {
+    return userRepository
+        .findByLoginId(loginId)
+        .orElseThrow(() -> new RuntimeException("User not found"));
+  }
+
+  @Override
+  public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+    User user =
+        userRepository
+            .findByLoginId(username)
+            .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+    List<GrantedAuthority> authorities =
+        Collections.singletonList(new SimpleGrantedAuthority(user.getUserRole()));
+
+    return new org.springframework.security.core.userdetails.User(
+        user.getLoginId(), user.getLoginPw(), authorities);
+  }
+}

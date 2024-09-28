@@ -1,4 +1,3 @@
 package goblin.app.Common.exception;
 
-public class ExceptionService {
-}
+public class ExceptionService {}
