@@ -21,6 +21,7 @@ import goblin.app.User.model.dto.UserRegistrationResponseDTO;
 import goblin.app.User.model.entity.User;
 import goblin.app.User.service.UserService;
 import goblin.app.User.util.JwtUtil;
+import io.jsonwebtoken.Claims;
 import io.swagger.v3.oas.annotations.Operation;
 
 @RestController
@@ -109,6 +110,25 @@ public class UserController {
     } catch (RuntimeException e) {
       // 예외 발생 시 로그 출력
       log.error("Error during token refresh in controller /api/refresh-token: {}", e.getMessage());
+      return ResponseEntity.badRequest().body(e.getMessage());
+    }
+  }
+
+  @Operation(summary = "회원 탈퇴", description = "사용자가 자신의 계정을 삭제")
+  @DeleteMapping("/delete")
+  public ResponseEntity<?> deleteUser(@RequestHeader("Authorization") String bearerToken) {
+    try {
+      String token = bearerToken.substring(7);
+      Claims claims = jwtUtil.getAllClaimsFromToken(token);
+      String loginId = claims.getId();
+
+      // 회원 탈퇴 서비스 호출
+      userService.deleteUser(loginId);
+
+      log.info("회원 탈퇴 완료: 사용자 ID - {}", loginId);
+      return ResponseEntity.ok("회원 탈퇴가 완료되었습니다.");
+    } catch (RuntimeException e) {
+      log.error("회원 탈퇴 실패: {}", e.getMessage());
       return ResponseEntity.badRequest().body(e.getMessage());
     }
   }

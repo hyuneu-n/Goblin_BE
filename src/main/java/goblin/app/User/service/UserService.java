@@ -91,6 +91,19 @@ public class UserService implements UserDetailsService {
     return jwtUtil.createAccessToken(user.getLoginId(), user.getUsername(), user.getUserRole());
   }
 
+  // 회원 탈퇴 로직
+  public void deleteUser(String loginId) {
+    // 사용자 정보 가져오기
+    User user =
+        userRepository
+            .findByLoginId(loginId)
+            .orElseThrow(() -> new RuntimeException("탈퇴할 사용자를 찾을 수 없습니다."));
+
+    // 사용자 삭제
+    userRepository.delete(user);
+    log.info("회원 탈퇴 성공: 사용자 ID - {}", loginId);
+  }
+
   public User saveRefreshToken(String loginId, String refreshToken) {
     User user =
         userRepository
