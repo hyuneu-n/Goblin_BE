@@ -105,8 +105,6 @@ public class GroupService {
       GroupCalendar groupCalendar = new GroupCalendar();
       groupCalendar.setGroupId(groupId);
       groupCalendar.setTitle(request.getTitle());
-
-      // 날짜 설정 추가 (빠졌던 부분)
       groupCalendar.setDate(date);
 
       // 시간 범위를 AM/PM 정보를 포함하여 처리
@@ -133,7 +131,6 @@ public class GroupService {
       groupCalendarRepository.save(groupCalendar);
 
       // 참여자 저장 로직
-
       // 1. 일정을 생성한 master도 참가자로 추가
       User creator =
           userRepository

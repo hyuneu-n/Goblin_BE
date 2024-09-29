@@ -13,5 +13,5 @@ public class GroupCalendarRequestDTO {
   private List<LocalDate> dates; // 여러 날짜 선택
   private TimeRange timeRange; // AM/PM, 시간과 분 정보
   private String place;
-  private List<String> participants; // 참여자 loginId 리스트
+  private List<String> participants;
 }

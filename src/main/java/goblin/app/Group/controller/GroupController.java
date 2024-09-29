@@ -90,7 +90,7 @@ public class GroupController {
       if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
         String token = bearerToken.substring(7);
         Claims claims = jwtUtil.getAllClaimsFromToken(token);
-        loginId = claims.getId(); // 토큰에서 loginId 추출
+        loginId = claims.getId();
       }
 
       log.info("추출된 로그인 ID: {}", loginId);
