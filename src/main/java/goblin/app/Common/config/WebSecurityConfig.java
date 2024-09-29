@@ -47,8 +47,9 @@ public class WebSecurityConfig {
                         "/swagger-ui/**",
                         "/v3/api-docs/**",
                         "/api/users/register",
-                        "api/users/check-id",
-                        "/api/users/login")
+                        "/api/users/check-id",
+                        "/api/users/login",
+                        "/api/groups/**")
                     .permitAll()
                     .requestMatchers("/api/v1/user/*")
                     .hasRole("USER")
