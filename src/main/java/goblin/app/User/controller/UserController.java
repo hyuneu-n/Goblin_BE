@@ -75,7 +75,8 @@ public class UserController {
       String accessToken = userService.loginUser(request.getLoginId(), request.getPassword());
 
       // Refresh Token 생성 및 저장
-      String refreshToken = jwtUtil.createRefreshToken(request.getLoginId());
+      String userRole = userService.getUserRoleByLoginId(request.getLoginId());
+      String refreshToken = jwtUtil.createRefreshToken(request.getLoginId(), userRole);
       userService.saveRefreshToken(request.getLoginId(), refreshToken);
 
       // 사용자 정보 가져오기 (닉네임 등)
