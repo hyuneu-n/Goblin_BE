@@ -46,6 +46,12 @@ public class UserCalendar {
         this.endTime = endTime;
     }
 
+    public void update(Long id,String title, LocalDateTime startTime, LocalDateTime endTime) {
+        this.id = id;
+        this.title = title;
+        this.startTime = startTime;
+        this.endTime = endTime;
+    }
 
 
 }

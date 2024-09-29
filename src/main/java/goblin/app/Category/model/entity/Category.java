@@ -1,10 +1,8 @@
 package goblin.app.Category.model.entity;
 
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import goblin.app.User.model.entity.User;
+import jakarta.persistence.*;
 import lombok.Getter;
 
 @Entity
@@ -16,5 +14,11 @@ public class Category {
     private Long id;
 
     private String categoryName;
+
+    @ManyToOne
+    @JoinColumn(name = "userId")
+    private User user;
+
+    private boolean isRevealed;
 
 }
