@@ -2,6 +2,7 @@ plugins {
 	id 'java'
 	id 'org.springframework.boot' version '3.3.4'
 	id 'io.spring.dependency-management' version '1.1.6'
+	id 'com.diffplug.spotless' version '6.11.0'
 }
 
 group = 'goblin'
@@ -24,27 +25,30 @@ repositories {
 }
 
 dependencies {
-	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-	implementation 'org.springframework.boot:spring-boot-starter-security'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
-	compileOnly 'org.projectlombok:lombok'
-	runtimeOnly 'com.h2database:h2'
-	runtimeOnly 'com.mysql:mysql-connector-j'
+	//swagger 설정 openapi-ui
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0'
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-api:2.5.0'
+	//devtools > 서버 재시작 안해도 변경있으면 자동 재시작
+	developmentOnly 'org.springframework.boot:spring-boot-devtools'
+	//lombok
 	annotationProcessor 'org.projectlombok:lombok'
+	compileOnly 'org.projectlombok:lombok'
+	//db설정
+	runtimeOnly 'com.mysql:mysql-connector-j'
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
-	testImplementation 'org.springframework.security:spring-security-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
-	//QueryDSL
-	implementation 'com.querydsl:querydsl-jpa:5.0.0:jakarta'
-	annotationProcessor "com.querydsl:querydsl-apt:5.0.0:jakarta"
-	annotationProcessor "jakarta.annotation:jakarta.annotation-api"
-	annotationProcessor "jakarta.persistence:jakarta.persistence-api"
+	//spring security
+	implementation 'org.springframework.boot:spring-boot-starter-security'
+	//jwt
+	implementation group:'io.jsonwebtoken', name: 'jjwt-api', version: '0.11.5'
+	implementation group:'io.jsonwebtoken', name: 'jjwt-impl', version: '0.11.5'
+	implementation group:'io.jsonwebtoken', name: 'jjwt-jackson', version: '0.11.5'
 
-	//swagger
-	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.0.2'
-	implementation 'org.hibernate.validator:hibernate-validator:7.0.2.Final'
-
+	//validation
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
 }
 
 tasks.named('test') {
@@ -60,6 +64,10 @@ tasks.withType(JavaCompile) {
 	options.getGeneratedSourceOutputDirectory().set(file(generated))
 }
 
+tasks.named('compileJava') {
+	dependsOn 'spotlessApply'
+}
+
 // java source set 에 querydsl QClass 위치 추가
 sourceSets {
 	main.java.srcDirs += [ generated ]
@@ -72,4 +80,19 @@ clean {
 
 test {
 	useJUnitPlatform()
+}
+
+spotless {
+	java {
+		//Google JAVA Format 적용
+		googleJavaFormat()
+		// 아래 순서로 import 문 정렬
+		importOrder('java', 'javax', 'jakarta', 'org', 'com')
+		// 사용하지 않는 import 제거
+		removeUnusedImports()
+		// 각 라인 끝에 있는 공백을 제거
+		trimTrailingWhitespace()
+		// 파일 끝에 새로운 라인 추가
+		endWithNewline()
+	}
 }

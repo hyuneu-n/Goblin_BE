@@ -17,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -58,12 +59,13 @@ public class UserCalService {
 
     // 고정 스케줄 삭제 (hard delete)
     @Transactional
-    public void deleteById(Long id, User currentUser) {
+    public uCalResponseDto deleteById(Long id, User currentUser) {
         UserCalendar userCalendar = userCalRepository.findById(id).orElseThrow(() -> new CustomException(ErrorCode.SCHEDULE_NOT_FOUND));
         if (currentUser.equals(userCalendar.getUser()))
             userCalRepository.delete(userCalendar);
         else
             throw new CustomException(ErrorCode.UNAUTHORIZED_ACCESS);
+        return new uCalResponseDto(userCalendar);
     }
 
 
@@ -78,16 +80,16 @@ public class UserCalService {
         year = (year <= 0) ? currentYear : year;
         month = (month <= 0 || month > 12) ? currentMonth : month;
 
-        List<UserCalendar> scheduleList = userCalRepository.findByYearAndMonth(year, month);
+        List<UserCalendar> scheduleList = userCalRepository.findByYearAndMonth(year, month,user);
         return scheduleList.stream()
+                .limit(3)
                 .map(uCalResponseDto::new)
                 .collect(Collectors.toList());
     }
 
     // 고정 스케줄 일별 조회
     @Transactional
-    // 고정 스케줄 월별 조회 (페이징 x) 3개까지만 표시
-    public List<uCalResponseDto> viewByDay(int year, int month, int day) {
+    public List<uCalResponseDto> viewByDay(int year, int month, int day, User user) {
         // 기본값으로 현재 시간에서 연도와 월을 가져오기
         int currentYear = LocalDate.now().getYear();
         int currentMonth = LocalDate.now().getMonthValue();
@@ -96,15 +98,15 @@ public class UserCalService {
         year = (year <= 0) ? currentYear : year;
         month = (month <= 0 || month > 12) ? currentMonth : month;
 
-        List<UserCalendar> scheduleList = userCalRepository.findByDay(year, month, day);
+        List<UserCalendar> scheduleList = userCalRepository.findByDay(year, month, day,user);
         return scheduleList.stream()
                 .map(uCalResponseDto::new)
                 .collect(Collectors.toList());
     }
 
-    // 추가 구현 목록
     // 고정 스케줄 메모 등록
     // 고정 스케줄 그룹별 공유 여부 설정 (중복 제거)
     // 고정 스케줄 검색
+    // 해당 카테고리 스케줄 조회
 
 }

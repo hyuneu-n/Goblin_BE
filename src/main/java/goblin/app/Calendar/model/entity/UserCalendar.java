@@ -17,10 +17,10 @@ public class UserCalendar {
     private Long id;
 
     @OneToMany
-    @JoinColumn(name = "userId")
+    @JoinColumn(name = "user_id")
     private User user;
 
-    @JoinColumn(name = "categoryId")
+    @JoinColumn(name = "category_id")
     @OneToMany
     private Category category;
 
@@ -31,8 +31,10 @@ public class UserCalendar {
     @Lob
     private String note;
 
+    @Column(name = "start_time")
     private LocalDateTime startTime;
 
+    @Column(name = "end_time")
     private LocalDateTime endTime;
 
 

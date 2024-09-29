@@ -4,7 +4,8 @@ package goblin.app.Calendar.controller;
 import goblin.app.Calendar.model.dto.request.uCalEditRequestDto;
 import goblin.app.Calendar.model.dto.request.uCalSaveRequestDto;
 import goblin.app.Calendar.model.dto.response.uCalResponseDto;
-import goblin.app.Calendar.model.entity.UserCalendar;
+import jakarta.validation.Valid;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import goblin.app.Calendar.service.UserCalService;
 import goblin.app.User.model.entity.User;
 import lombok.NoArgsConstructor;
@@ -24,32 +25,33 @@ public class UserCalController {
 
     // 로그인 구현 후 수정
     @PostMapping("/save")
-    public ResponseEntity<uCalResponseDto> save(@RequestBody uCalSaveRequestDto requestDto, User user) {
+    public ResponseEntity<uCalResponseDto> save(@RequestBody @Valid uCalSaveRequestDto requestDto, User user) {
          uCalResponseDto responseDto = userCalService.save(requestDto, user);
          return ResponseEntity.status(HttpStatus.CREATED).body(responseDto);
     }
 
     @PutMapping("/edit")
-    public ResponseEntity<uCalResponseDto> edit(@RequestBody uCalEditRequestDto requestDto, User user) {
+    public ResponseEntity<uCalResponseDto> edit(@RequestBody @Valid uCalEditRequestDto requestDto,@AuthenticationPrincipal User user) {
         uCalResponseDto responseDto = userCalService.edit(requestDto,user);
         return ResponseEntity.status(HttpStatus.OK).body(responseDto);
     }
 
-    /*
     @DeleteMapping("/delete/{scheduleId}")
-    public ResponseEntity<uCalResponseDto> delete(@PathVariable Long scheduleId, User user) {
-
+    public ResponseEntity<uCalResponseDto> delete(@PathVariable Long scheduleId,@AuthenticationPrincipal User user) {
+        uCalResponseDto responseDto = userCalService.deleteById(scheduleId, user);
+        return ResponseEntity.status(HttpStatus.OK).body(responseDto);
     }
     @GetMapping("/view-month")
-    public ResponseEntity<List<uCalResponseDto>> viewByMonth(@RequestParam int year, @RequestParam int month, User user) {
+    public ResponseEntity<List<uCalResponseDto>> viewByMonth(@RequestParam int year, @RequestParam int month,@AuthenticationPrincipal User user) {
         List<uCalResponseDto> calList = userCalService.viewByMonth(year, month, user);
+        return ResponseEntity.status(HttpStatus.OK).body(calList);
     }
 
     @GetMapping("/view-day")
-    public ResponseEntity<uCalResponseDto> viewByDay(@RequestParam int year, @RequestParam int month) {
-
+    public ResponseEntity<List<uCalResponseDto>> viewByDay(@RequestParam int year, @RequestParam int month,@RequestParam int day,  @AuthenticationPrincipal User user) {
+        List<uCalResponseDto> calList = userCalService.viewByDay(year,month,day,user);
+        return ResponseEntity.status(HttpStatus.OK).body(calList);
     }
-    */
 
 
 }
