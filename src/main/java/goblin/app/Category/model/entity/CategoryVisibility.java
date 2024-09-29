@@ -2,10 +2,7 @@ package goblin.app.Category.model.entity;
 
 import goblin.app.Group.model.entity.Group;
 import goblin.app.User.model.entity.User;
-import jakarta.persistence.Entity;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.OneToOne;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -15,17 +12,20 @@ import lombok.NoArgsConstructor;
 public class CategoryVisibility {
 
 
-    @JoinColumn(name = "userId")
+    @JoinColumn(name = "user_id")
     @OneToMany
     private User user;
 
-    @JoinColumn(name = "groupId")
+    @JoinColumn(name = "group_id")
     @OneToOne
     private Group group;
 
-    @JoinColumn(name = "categoryId")
+    @JoinColumn(name = "category_id")
     @OneToOne
     private Category category;
+
+    @Column(columnDefinition = "false")
     private boolean isRevealed;
+
 
 }
