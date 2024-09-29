@@ -43,11 +43,12 @@ public class JwtUtil {
         .compact();
   }
   // Refresh Token 발급 부분
-  public String createRefreshToken(String userId) {
+  public String createRefreshToken(String userId, String userRole) {
     Date expireTime = Date.from(Instant.now().plus(7, ChronoUnit.DAYS));
     Key key = getSigningKey();
     return Jwts.builder()
         .setId(userId)
+        .claim("role", userRole)
         .setIssuedAt(new Date())
         .setExpiration(expireTime)
         .signWith(key, SignatureAlgorithm.HS256)
