@@ -37,7 +37,7 @@ public class GroupCalendar {
   private LocalDateTime endDate; // 종료 날짜
 
   @Column(nullable = false)
-  private LocalTime time; // 시간
+  private LocalTime time; // 예상 시간
 
   @Column(nullable = false)
   private String place;

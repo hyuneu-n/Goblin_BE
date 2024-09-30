@@ -222,7 +222,7 @@ public class GroupController {
   @DeleteMapping("/{groupId}/members/{memberId}")
   public ResponseEntity<?> removeMember(
       @PathVariable Long groupId,
-      @PathVariable Long memberId,
+      @PathVariable String memberId,
       @RequestHeader(value = "Authorization", required = true) String bearerToken) {
     try {
       String loginId = extractLoginId(bearerToken);
