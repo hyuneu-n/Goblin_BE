@@ -101,23 +101,32 @@ public class GroupService {
   public void createGroupEvent(
       Long groupId, GroupCalendarRequestDTO request, String creatorLoginId) {
 
+    // creatorLoginId를 이용해 User 객체 조회
+    User creator =
+        userRepository
+            .findByLoginId(creatorLoginId)
+            .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다: loginId=" + creatorLoginId));
+
     // 일정 생성 로직
     GroupCalendar groupCalendar = new GroupCalendar();
     groupCalendar.setGroupId(groupId);
     groupCalendar.setTitle(request.getTitle());
     groupCalendar.setStartDate(request.getStartDate()); // 시작 날짜
     groupCalendar.setEndDate(request.getEndDate()); // 종료 날짜
+
+    // TimeRange 정보를 LocalTime으로 변환하여 설정
+    LocalTime time = convertAmPmToLocalTime(request.getTimeRange());
+    groupCalendar.setTime(time); // 예상 시간 설정
+
     groupCalendar.setPlace(request.getPlace());
+    groupCalendar.setLink(request.getLink()); // 링크 설정
+    groupCalendar.setNote(request.getNote()); // 메모 설정
     groupCalendar.setCreatedDate(LocalDateTime.now());
+    groupCalendar.setCreatedBy(creator); // User 객체 설정
 
     groupCalendarRepository.save(groupCalendar);
 
     // 일정을 생성한 사용자도 자동으로 참여자로 추가
-    User creator =
-        userRepository
-            .findByLoginId(creatorLoginId)
-            .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다: loginId=" + creatorLoginId));
-
     GroupCalendarParticipant masterParticipant = new GroupCalendarParticipant();
     masterParticipant.setCalendarId(groupCalendar.getId());
     masterParticipant.setUserId(creator.getId());
@@ -375,18 +384,18 @@ public class GroupService {
   }
 
   // 그룹 멤버 삭제 로직
-  public void removeMember(Long groupId, Long memberId, String loginId) {
+  public void removeMember(Long groupId, String memberLoginId, String loginId) {
+    // 그룹 소유자 검증 (방장이 맞는지 확인)
     validateGroupOwner(groupId, loginId);
+
+    // 그룹 ID와 멤버의 loginId를 기준으로 그룹 멤버를 찾음
     GroupMember groupMember =
         groupMemberRepository
-            .findById(memberId)
-            .orElseThrow(() -> new RuntimeException("멤버를 찾을 수 없습니다: memberId=" + memberId));
+            .findByGroupIdAndUser_LoginId(groupId, memberLoginId)
+            .orElseThrow(() -> new RuntimeException("해당 그룹에 속하지 않은 멤버입니다."));
 
-    if (!groupMember.getGroupId().equals(groupId)) {
-      throw new RuntimeException("해당 그룹에 속하지 않은 멤버입니다.");
-    }
-
+    // 멤버 삭제
     groupMemberRepository.delete(groupMember);
-    log.info("그룹 멤버가 삭제되었습니다: memberId = {}, groupId = {}", memberId, groupId);
+    log.info("그룹 멤버가 삭제되었습니다: loginId = {}, groupId = {}", memberLoginId, groupId);
   }
 }
