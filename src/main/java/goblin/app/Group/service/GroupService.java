@@ -398,4 +398,26 @@ public class GroupService {
     groupMemberRepository.delete(groupMember);
     log.info("그룹 멤버가 삭제되었습니다: loginId = {}, groupId = {}", memberLoginId, groupId);
   }
+
+  // 가능한 시간 제출
+  public void setAvailableTime(Long calendarId, AvailableTimeRequestDTO request, String loginId) {
+    User user =
+        userRepository
+            .findByLoginId(loginId)
+            .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다: loginId = " + loginId));
+
+    GroupCalendar calendar =
+        groupCalendarRepository
+            .findById(calendarId)
+            .orElseThrow(() -> new RuntimeException("캘린더를 찾을 수 없습니다: calendarId = " + calendarId));
+
+    AvailableTime availableTime = new AvailableTime();
+    availableTime.setUserId(user.getId());
+    availableTime.setCalendarId(calendarId);
+    availableTime.setStartTime(request.getStartTime());
+    availableTime.setEndTime(request.getEndTime());
+
+    availableTimeRepository.save(availableTime);
+    log.info("참여자의 가능 시간 등록 완료: calendarId = {}, userId = {}", calendarId, user.getId());
+  }
 }

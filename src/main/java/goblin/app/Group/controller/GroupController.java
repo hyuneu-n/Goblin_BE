@@ -233,4 +233,25 @@ public class GroupController {
       return ResponseEntity.badRequest().body(e.getMessage());
     }
   }
+
+  @Operation(summary = "가능한 시간 제출", description = "참여자가 가능한 시간을 제출합니다.")
+  @PostMapping("/calendar/{calendarId}/available-time")
+  public ResponseEntity<?> submitAvailableTime(
+      @PathVariable Long calendarId,
+      @RequestBody AvailableTimeRequestDTO request,
+      @RequestHeader(value = "Authorization", required = true) String bearerToken) {
+
+    String loginId = extractLoginId(bearerToken);
+    groupService.setAvailableTime(calendarId, request, loginId);
+
+    return ResponseEntity.ok("가능한 시간이 제출되었습니다.");
+  }
+
+  @Operation(summary = "최적 시간 계산", description = "참여자들의 시간을 기반으로 가장 적합한 시간을 계산합니다.")
+  @GetMapping("/calendar/{calendarId}/optimal-time")
+  public ResponseEntity<?> calculateOptimalTime(@PathVariable Long calendarId) {
+    List<TimeSlot> optimalTimeSlots = groupService.calculateOptimalTime(calendarId);
+
+    return ResponseEntity.ok(optimalTimeSlots);
+  }
 }
