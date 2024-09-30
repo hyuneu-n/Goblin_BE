@@ -60,7 +60,7 @@ public class GroupController {
   }
 
   // 그룹 일정 등록
-  @Operation(summary = "그룹 일정 등록", description = "그룹 일정을 등록합니다.")
+  @Operation(summary = "그룹 일정 등록", description = "그룹 일정을 등록")
   @PostMapping("/{groupId}/calendar")
   public ResponseEntity<?> createGroupEvent(
       @PathVariable Long groupId,
@@ -77,7 +77,7 @@ public class GroupController {
   }
 
   // 일정 삭제 (Soft Delete)
-  @Operation(summary = "일정 삭제", description = "그룹 일정을 삭제합니다. (Soft Delete, 방장만 가능)")
+  @Operation(summary = "일정 삭제", description = "그룹 일정을 삭제 (Soft Delete, 방장만 가능)")
   @DeleteMapping("/{groupId}/calendar/{calendarId}")
   public ResponseEntity<?> deleteCalendarEvent(
       @PathVariable Long groupId,
@@ -95,7 +95,7 @@ public class GroupController {
   }
 
   // 일정 수정
-  @Operation(summary = "그룹 일정 수정", description = "그룹 일정을 수정합니다.")
+  @Operation(summary = "그룹 일정 수정", description = "그룹 일정을 수정")
   @PutMapping("/calendar/{calendarId}")
   public ResponseEntity<?> updateGroupEvent(
       @PathVariable Long calendarId,
@@ -112,7 +112,7 @@ public class GroupController {
   }
 
   // 메모 추가
-  @Operation(summary = "메모 추가", description = "일정에 메모를 추가합니다.")
+  @Operation(summary = "메모 추가", description = "일정에 메모를 추가")
   @PostMapping("/{groupId}/calendar/{calendarId}/memo")
   public ResponseEntity<?> addMemoToCalendar(
       @PathVariable Long groupId,
@@ -130,7 +130,7 @@ public class GroupController {
   }
 
   // 일정 확정
-  @Operation(summary = "그룹 일정 확정", description = "그룹 일정을 확정합니다. (방장만 가능)")
+  @Operation(summary = "그룹 일정 확정", description = "그룹 일정을 확정(방장만 가능)")
   @PostMapping("/{groupId}/calendar/{calendarId}/confirm")
   public ResponseEntity<?> confirmCalendarEvent(
       @PathVariable Long groupId,
@@ -148,7 +148,7 @@ public class GroupController {
   }
 
   // 그룹 조회
-  @Operation(summary = "그룹 조회", description = "로그인한 사용자의 그룹 목록을 조회합니다.")
+  @Operation(summary = "그룹 조회", description = "로그인한 사용자의 그룹 목록을 조회")
   @GetMapping
   public ResponseEntity<?> getUserGroups(
       @RequestHeader(value = "Authorization", required = true) String bearerToken) {
@@ -163,7 +163,7 @@ public class GroupController {
   }
 
   // 그룹 캘린더 조회
-  @Operation(summary = "그룹 캘린더 조회", description = "그룹의 일정을 조회합니다.")
+  @Operation(summary = "그룹 일정 조회", description = "그룹의 일정을 조회")
   @GetMapping("/{groupId}/calendar")
   public ResponseEntity<?> getGroupCalendar(@PathVariable Long groupId) {
     try {
@@ -185,7 +185,7 @@ public class GroupController {
   }
 
   // 그룹명 수정
-  @Operation(summary = "그룹명 수정", description = "그룹명을 수정합니다. (방장만 가능)")
+  @Operation(summary = "그룹명 수정", description = "그룹명 수정 (방장만 가능)")
   @PutMapping("/{groupId}")
   public ResponseEntity<?> updateGroupName(
       @PathVariable Long groupId,
@@ -202,7 +202,7 @@ public class GroupController {
   }
 
   // 그룹 삭제
-  @Operation(summary = "그룹 삭제", description = "그룹을 삭제합니다. (방장만 가능)")
+  @Operation(summary = "그룹 삭제", description = "그룹 삭제(방장만 가능)")
   @DeleteMapping("/{groupId}")
   public ResponseEntity<?> deleteGroup(
       @PathVariable Long groupId,
@@ -218,7 +218,7 @@ public class GroupController {
   }
 
   // 그룹 멤버 삭제
-  @Operation(summary = "그룹 멤버 삭제", description = "그룹에서 멤버를 삭제합니다. (방장만 가능)")
+  @Operation(summary = "그룹 멤버 삭제", description = "그룹에서 멤버를 삭제합(방장만 가능)")
   @DeleteMapping("/{groupId}/members/{memberId}")
   public ResponseEntity<?> removeMember(
       @PathVariable Long groupId,
@@ -234,7 +234,7 @@ public class GroupController {
     }
   }
 
-  @Operation(summary = "가능한 시간 제출", description = "참여자가 가능한 시간을 제출합니다.")
+  @Operation(summary = "가능한 시간 제출", description = "참여자가 가능한 시간을 제출")
   @PostMapping("/calendar/{calendarId}/available-time")
   public ResponseEntity<?> submitAvailableTime(
       @PathVariable Long calendarId,
@@ -247,7 +247,7 @@ public class GroupController {
     return ResponseEntity.ok("가능한 시간이 제출되었습니다.");
   }
 
-  @Operation(summary = "최적 시간 계산", description = "참여자들의 시간을 기반으로 가장 적합한 시간을 계산합니다.")
+  @Operation(summary = "최적 시간 계산", description = "참여자들이 제출한 시간을 기반으로 가장 적합한 시간을 계산")
   @GetMapping("/calendar/{calendarId}/optimal-time")
   public ResponseEntity<?> calculateOptimalTime(@PathVariable Long calendarId) {
     List<TimeSlot> optimalTimeSlots = groupService.calculateOptimalTime(calendarId);
