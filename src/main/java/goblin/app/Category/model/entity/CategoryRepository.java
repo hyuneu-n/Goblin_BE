@@ -1,5 +1,5 @@
-// package goblin.app.Category.model.entity;
-//
-// import org.springframework.data.jpa.repository.JpaRepository;
-//
-// public interface CategoryRepository extends JpaRepository<Category, Long> {}
+package goblin.app.Category.model.entity;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface CategoryRepository extends JpaRepository<Category, Long> {}
