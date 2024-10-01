@@ -10,11 +10,12 @@ import lombok.Setter;
 @Setter
 public class GroupCalendarRequestDTO {
   private String title;
+  private List<LocalDateTime> dates; // 각 날짜 목록
   private LocalDateTime startDate; // 시작 날짜
   private LocalDateTime endDate; // 종료 날짜
-  private TimeRange timeRange; // AM/PM, 시간과 분 정보 (시간 범위)
+  private TimeRange timeRange; // AM/PM, 시간과 분 정보
   private String place;
-  private String link; // 비대면 링크
-  private String note; // 메모
-  private List<String> participants; // 참여자 리스트
+  private String link;
+  private String note;
+  private List<String> participants;
 }

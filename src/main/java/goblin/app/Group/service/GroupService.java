@@ -2,7 +2,6 @@ package goblin.app.Group.service;
 
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -16,6 +15,7 @@ import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import goblin.app.Group.model.dto.AvailableTimeRequestDTO;
+import goblin.app.Group.model.dto.AvailableTimeSlot;
 import goblin.app.Group.model.dto.GroupCalendarRequestDTO;
 import goblin.app.Group.model.dto.TimeRange;
 import goblin.app.Group.model.dto.TimeSlot;
@@ -71,13 +71,13 @@ public class GroupService {
   public Group validateGroupOwner(Long groupId, String loginId) {
     Group group =
         groupRepository
-            .findById(groupId)
+            .findByIdAndNotDeleted(groupId)
             .orElseThrow(() -> new RuntimeException("그룹을 찾을 수 없습니다: groupId=" + groupId));
 
     if (!group.getCreatedBy().getLoginId().equals(loginId)) {
       throw new RuntimeException("해당 그룹의 관리자가 아닙니다.");
     }
-    return group; // Group 객체를 반환
+    return group;
   }
 
   // 그룹 멤버 초대 로직
@@ -211,20 +211,8 @@ public class GroupService {
             .findByLoginId(loginId)
             .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다: loginId = " + loginId));
 
-    List<Group> groups = new ArrayList<>();
-    List<GroupMember> groupMembers = groupMemberRepository.findAllByUser(user);
-
-    for (GroupMember groupMember : groupMembers) {
-      Group group =
-          groupRepository
-              .findById(groupMember.getGroupId())
-              .orElseThrow(
-                  () ->
-                      new RuntimeException("그룹을 찾을 수 없습니다: groupId = " + groupMember.getGroupId()));
-      groups.add(group);
-    }
-
-    return groups;
+    // 유저가 속한 그룹(방장, 멤버 포함) 조회 + 삭제된 그룹은 조회 안됨
+    return groupRepository.findAllByUserAsMember(user);
   }
 
   // 일정 삭제
@@ -316,43 +304,6 @@ public class GroupService {
     return LocalTime.of(hour, timeRange.getMinute());
   }
 
-  // 가능한 시간대 등록 로직
-  public void setAvailableTime(Long calendarId, AvailableTimeRequestDTO request) {
-    User user =
-        userRepository
-            .findByLoginId(request.getLoginId())
-            .orElseThrow(
-                () -> new RuntimeException("유저를 찾을 수 없습니다: loginId = " + request.getLoginId()));
-
-    AvailableTime availableTime = new AvailableTime();
-    availableTime.setUserId(user.getId());
-    availableTime.setCalendarId(calendarId);
-    availableTime.setStartTime(request.getStartTime());
-    availableTime.setEndTime(request.getEndTime());
-
-    availableTimeRepository.save(availableTime);
-    log.info("참여자의 가능 시간 등록 완료: calendarId = {}, userId = {}", calendarId, user.getId());
-  }
-
-  // 참여자들의 시간대를 바탕으로 가장 많이 선택된 시간대 계산
-  public List<TimeSlot> calculateOptimalTime(Long calendarId) {
-    List<AvailableTime> availableTimes = availableTimeRepository.findByCalendarId(calendarId);
-
-    // 시간대별로 카운팅하는 로직 (가장 많이 선택된 시간대 찾기)
-    Map<TimeSlot, Integer> timeSlotCount = new HashMap<>();
-
-    for (AvailableTime time : availableTimes) {
-      TimeSlot slot = new TimeSlot(time.getStartTime(), time.getEndTime());
-      timeSlotCount.put(slot, timeSlotCount.getOrDefault(slot, 0) + 1);
-    }
-
-    // 가장 많이 선택된 시간대들을 정렬하여 반환
-    return timeSlotCount.entrySet().stream()
-        .sorted(Map.Entry.<TimeSlot, Integer>comparingByValue().reversed())
-        .map(Map.Entry::getKey)
-        .collect(Collectors.toList());
-  }
-
   // 일정 확정 로직 (참여자들이 선택한 시간 중에서 하나를 선택)
   public void confirmEventTime(Long calendarId, TimeSlot chosenSlot) {
     GroupCalendar calendar =
@@ -399,25 +350,45 @@ public class GroupService {
     log.info("그룹 멤버가 삭제되었습니다: loginId = {}, groupId = {}", memberLoginId, groupId);
   }
 
-  // 가능한 시간 제출
+  // 가능한 시간대 등록 로직
   public void setAvailableTime(Long calendarId, AvailableTimeRequestDTO request, String loginId) {
     User user =
         userRepository
             .findByLoginId(loginId)
             .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다: loginId = " + loginId));
 
-    GroupCalendar calendar =
-        groupCalendarRepository
-            .findById(calendarId)
-            .orElseThrow(() -> new RuntimeException("캘린더를 찾을 수 없습니다: calendarId = " + calendarId));
+    for (AvailableTimeSlot slot : request.getAvailableTimeSlots()) {
+      AvailableTime availableTime = new AvailableTime();
+      availableTime.setUserId(user.getId());
+      availableTime.setCalendarId(calendarId);
 
-    AvailableTime availableTime = new AvailableTime();
-    availableTime.setUserId(user.getId());
-    availableTime.setCalendarId(calendarId);
-    availableTime.setStartTime(request.getStartTime());
-    availableTime.setEndTime(request.getEndTime());
+      // LocalTime에서 LocalDateTime으로 변환
+      LocalDateTime startDateTime = LocalDateTime.of(slot.getDate(), slot.getStartTime());
+      LocalDateTime endDateTime = LocalDateTime.of(slot.getDate(), slot.getEndTime());
 
-    availableTimeRepository.save(availableTime);
-    log.info("참여자의 가능 시간 등록 완료: calendarId = {}, userId = {}", calendarId, user.getId());
+      availableTime.setStartTime(startDateTime);
+      availableTime.setEndTime(endDateTime);
+
+      availableTimeRepository.save(availableTime);
+      log.info("참여자의 가능 시간 등록 완료: calendarId = {}, userId = {}", calendarId, user.getId());
+    }
+  }
+  // 참여자들의 시간대를 바탕으로 가장 많이 선택된 시간대 계산
+  public List<TimeSlot> calculateOptimalTime(Long calendarId) {
+    List<AvailableTime> availableTimes = availableTimeRepository.findByCalendarId(calendarId);
+
+    // 시간대별로 카운팅하는 로직 (가장 많이 선택된 시간대 찾기)
+    Map<TimeSlot, Integer> timeSlotCount = new HashMap<>();
+
+    for (AvailableTime time : availableTimes) {
+      TimeSlot slot = new TimeSlot(time.getStartTime(), time.getEndTime());
+      timeSlotCount.put(slot, timeSlotCount.getOrDefault(slot, 0) + 1);
+    }
+
+    // 가장 많이 선택된 시간대들을 정렬하여 반환
+    return timeSlotCount.entrySet().stream()
+        .sorted(Map.Entry.<TimeSlot, Integer>comparingByValue().reversed())
+        .map(Map.Entry::getKey)
+        .collect(Collectors.toList());
   }
 }
