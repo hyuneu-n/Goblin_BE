@@ -13,6 +13,8 @@ import jakarta.transaction.Transactional;
 
 import org.springframework.stereotype.Service;
 
+import goblin.app.Calendar.model.dto.request.uCalSaveRequestDto;
+import goblin.app.Calendar.service.UserCalService;
 import goblin.app.Group.model.dto.AvailableTimeRequestDTO;
 import goblin.app.Group.model.dto.AvailableTimeSlot;
 import goblin.app.Group.model.dto.GroupCalendarRequestDTO;
@@ -46,6 +48,7 @@ public class GroupService {
   private final UserRepository userRepository;
   private final AvailableTimeRepository availableTimeRepository;
   private final GroupConfirmedCalendarRepository groupConfirmedCalendarRepository;
+  private final UserCalService userCalService; // 개인 캘린더 서비스
 
   // 그룹 생성 로직
   public void createGroup(String groupName, String loginId) {
@@ -417,13 +420,12 @@ public class GroupService {
         && slot1.getEndTime().isAfter(slot2.getStartTime());
   }
 
-  // 일정 확정 로직 (선택된 시작 시간과 종료 시간으로 확정)
-  public void confirmCalendarEvent(Long calendarId, Long selectedTimeSlotId) {
-    // 후보 시간 ID로 확정할 시간을 찾음
+  // 일정 확정 메서드 수정 (개인 캘린더 저장 추가)
+  public void confirmCalendarEvent(Long calendarId, Long selectedTimeSlotId, String loginId) {
     List<TimeSlot> optimalTimeSlots = calculateOptimalTimes(calendarId);
     TimeSlot selectedTimeSlot =
         optimalTimeSlots.stream()
-            .filter(slot -> slot.getId().equals(selectedTimeSlotId)) // ID로 선택한 시간대를 찾음
+            .filter(slot -> slot.getId().equals(selectedTimeSlotId))
             .findFirst()
             .orElseThrow(() -> new RuntimeException("선택한 시간 슬롯을 찾을 수 없습니다."));
 
@@ -432,13 +434,39 @@ public class GroupService {
             .findById(calendarId)
             .orElseThrow(() -> new RuntimeException("일정을 찾을 수 없습니다: calendarId=" + calendarId));
 
-    // 일정 확정 (GroupCalendar 엔티티에 startTime과 endTime 저장)
+    // 일정 확정
     calendar.setStartTime(selectedTimeSlot.getStartTime().toLocalTime());
     calendar.setEndTime(selectedTimeSlot.getEndTime().toLocalTime());
     calendar.setConfirmed(true);
 
+    // 개인 캘린더에 일정 저장
+    saveToUserCalendar(calendar, loginId, selectedTimeSlot);
+
     groupCalendarRepository.save(calendar);
     log.info("일정이 확정되었습니다: calendarId = {}", calendarId);
+  }
+
+  // 개인 캘린더에 저장하는 메서드
+  private void saveToUserCalendar(GroupCalendar calendar, String loginId, TimeSlot timeSlot) {
+    // 유저 정보 찾기
+    User user =
+        userRepository
+            .findByLoginId(loginId)
+            .orElseThrow(() -> new RuntimeException("해당 유저를 찾을 수 없습니다: loginId=" + loginId));
+
+    // uCalSaveRequestDto 생성 (개인 캘린더에 저장하기 위한 DTO)
+    uCalSaveRequestDto requestDto =
+        uCalSaveRequestDto
+            .builder()
+            .title(calendar.getTitle())
+            .note(calendar.getNote())
+            .startTime(timeSlot.getStartTime())
+            .endTime(timeSlot.getEndTime())
+            .build();
+
+    // 개인 캘린더에 일정 저장
+    userCalService.save(requestDto, user);
+    log.info("개인 캘린더에 일정이 저장되었습니다: {}", requestDto.getTitle());
   }
 
   // 임의 시간 확정 로직

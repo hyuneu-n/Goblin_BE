@@ -147,8 +147,8 @@ public class GroupController {
       return ResponseEntity.status(HttpStatus.FORBIDDEN).body("해당 그룹의 멤버가 아닙니다.");
     }
 
-    // 선택된 후보 시간을 기반으로 일정 확정
-    groupService.confirmCalendarEvent(calendarId, selectedTimeSlotId);
+    // 선택된 후보 시간을 기반으로 일정 확정 및 개인 캘린더 저장
+    groupService.confirmCalendarEvent(calendarId, selectedTimeSlotId, loginId);
     return ResponseEntity.ok("일정이 확정되었습니다.");
   }
 
