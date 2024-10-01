@@ -339,4 +339,22 @@ public class GroupController {
       return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("최적 시간 계산 중 오류가 발생했습니다.");
     }
   }
+
+  @Operation(summary = "그룹 멤버 리스트 조회", description = "해당 그룹의 멤버 리스트를 반환합니다.")
+  @GetMapping("/{groupId}/members")
+  public ResponseEntity<?> getGroupMembers(
+      @PathVariable Long groupId,
+      @RequestHeader(value = "Authorization", required = true) String bearerToken) {
+
+    String loginId = extractLoginId(bearerToken);
+
+    // 사용자가 그룹에 속해 있는지 확인
+    if (!groupService.isUserInGroup(groupId, loginId)) {
+      return ResponseEntity.status(HttpStatus.FORBIDDEN).body("해당 그룹의 멤버가 아닙니다.");
+    }
+
+    // 그룹 멤버 리스트 가져오기
+    List<GroupMemberResponseDTO> members = groupService.getGroupMembers(groupId);
+    return ResponseEntity.ok(members);
+  }
 }

@@ -19,6 +19,7 @@ import goblin.app.Group.model.dto.AvailableTimeRequestDTO;
 import goblin.app.Group.model.dto.AvailableTimeSlot;
 import goblin.app.Group.model.dto.GroupCalendarRequestDTO;
 import goblin.app.Group.model.dto.GroupConfirmedCalendarDTO;
+import goblin.app.Group.model.dto.GroupMemberResponseDTO;
 import goblin.app.Group.model.dto.TimeRange;
 import goblin.app.Group.model.dto.TimeSlot;
 import goblin.app.Group.model.entity.AvailableTime;
@@ -497,5 +498,16 @@ public class GroupService {
         calendar.getTitle(),
         calendar.getPlace(),
         calendar.getNote());
+  }
+
+  // 그룹 멤버 리스트 조회 메서드
+  public List<GroupMemberResponseDTO> getGroupMembers(Long groupId) {
+    List<GroupMember> members = groupMemberRepository.findByGroupId(groupId);
+    return members.stream()
+        .map(
+            member ->
+                new GroupMemberResponseDTO(
+                    member.getUser().getUsername(), member.getUser().getLoginId()))
+        .collect(Collectors.toList());
   }
 }
