@@ -1,23 +1,20 @@
 package goblin.app.Calendar.model.dto.request;
 
-import jakarta.validation.constraints.NotBlank;
-import lombok.Builder;
+import java.time.LocalDateTime;
+
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import jakarta.validation.constraints.NotBlank;
 
 @Getter
 @NoArgsConstructor
 public class uCalEditRequestDto {
 
-    private Long id;
-    private Long userId;
+  private Long id;
 
-    @NotBlank
-    private String title;
+  @NotBlank private String title;
 
-    private LocalDateTime startTime;
-    private LocalDateTime endTime;
-
+  private LocalDateTime startTime;
+  private LocalDateTime endTime;
 }

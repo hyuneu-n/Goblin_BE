@@ -1,4 +1,3 @@
-/*
 package goblin.app.User.util;
 
 import java.nio.charset.StandardCharsets;
@@ -119,5 +118,3 @@ public class JwtUtil {
     return extractExpiration(token).before(new Date());
   }
 }
-
- */

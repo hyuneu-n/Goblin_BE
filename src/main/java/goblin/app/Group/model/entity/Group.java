@@ -23,5 +23,4 @@ public class Group {
   @ManyToOne
   @JoinColumn(name = "created_by", referencedColumnName = "login_Id", nullable = false)
   private User createdBy;
-
 }
