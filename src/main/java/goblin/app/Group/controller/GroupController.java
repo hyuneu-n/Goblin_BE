@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.*;
 import goblin.app.Group.model.dto.*;
 import goblin.app.Group.model.entity.Group;
 import goblin.app.Group.model.entity.GroupCalendar;
-import goblin.app.Group.model.entity.GroupConfirmedCalendar;
 import goblin.app.Group.service.GroupService;
 import goblin.app.User.util.JwtUtil;
 import io.jsonwebtoken.Claims;
@@ -189,9 +188,10 @@ public class GroupController {
       return ResponseEntity.status(HttpStatus.FORBIDDEN).body("해당 그룹의 멤버가 아닙니다.");
     }
 
-    List<GroupConfirmedCalendar> confirmedEvents =
+    // 서비스에서 확정된 일정을 가져와서 DTO로 반환
+    GroupConfirmedCalendarDTO confirmedCalendar =
         groupService.getConfirmedCalendar(groupId, calendarId);
-    return ResponseEntity.ok(confirmedEvents);
+    return ResponseEntity.ok(confirmedCalendar);
   }
 
   // 그룹 조회

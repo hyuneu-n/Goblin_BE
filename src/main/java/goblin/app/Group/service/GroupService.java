@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import goblin.app.Group.model.dto.AvailableTimeRequestDTO;
 import goblin.app.Group.model.dto.AvailableTimeSlot;
 import goblin.app.Group.model.dto.GroupCalendarRequestDTO;
+import goblin.app.Group.model.dto.GroupConfirmedCalendarDTO;
 import goblin.app.Group.model.dto.TimeRange;
 import goblin.app.Group.model.dto.TimeSlot;
 import goblin.app.Group.model.entity.AvailableTime;
@@ -422,7 +423,7 @@ public class GroupService {
     List<TimeSlot> optimalTimeSlots = calculateOptimalTimes(calendarId);
     TimeSlot selectedTimeSlot =
         optimalTimeSlots.stream()
-            .filter(slot -> slot.getId().equals(selectedTimeSlotId)) // ID로 필터링
+            .filter(slot -> slot.getId().equals(selectedTimeSlotId)) // ID로 선택한 시간대를 찾음
             .findFirst()
             .orElseThrow(() -> new RuntimeException("선택한 시간 슬롯을 찾을 수 없습니다."));
 
@@ -431,7 +432,7 @@ public class GroupService {
             .findById(calendarId)
             .orElseThrow(() -> new RuntimeException("일정을 찾을 수 없습니다: calendarId=" + calendarId));
 
-    // 일정 확정
+    // 일정 확정 (GroupCalendar 엔티티에 startTime과 endTime 저장)
     calendar.setStartTime(selectedTimeSlot.getStartTime().toLocalTime());
     calendar.setEndTime(selectedTimeSlot.getEndTime().toLocalTime());
     calendar.setConfirmed(true);
@@ -455,8 +456,18 @@ public class GroupService {
   }
 
   // 확정일정 조회
-  public List<GroupConfirmedCalendar> getConfirmedCalendar(Long groupId, Long calendarId) {
-    // groupId와 calendarId로 확정된 일정만 조회
-    return groupConfirmedCalendarRepository.findByGroupIdAndCalendarId(groupId, calendarId);
+  public GroupConfirmedCalendarDTO getConfirmedCalendar(Long groupId, Long calendarId) {
+    GroupCalendar calendar =
+        groupCalendarRepository
+            .findByIdAndGroupIdAndConfirmed(calendarId, groupId, true) // 확정된 일정만 조회
+            .orElseThrow(() -> new RuntimeException("확정된 일정을 찾을 수 없습니다: calendarId=" + calendarId));
+
+    // GroupConfirmedCalendarDTO로 변환하여 반환
+    return new GroupConfirmedCalendarDTO(
+        calendar.getStartTime(),
+        calendar.getEndTime(),
+        calendar.getTitle(),
+        calendar.getPlace(),
+        calendar.getNote());
   }
 }
