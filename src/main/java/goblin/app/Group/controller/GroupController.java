@@ -13,6 +13,7 @@ import goblin.app.Group.model.dto.*;
 import goblin.app.Group.model.entity.Group;
 import goblin.app.Group.model.entity.GroupCalendar;
 import goblin.app.Group.service.GroupService;
+import goblin.app.Group.service.InviteTokenService;
 import goblin.app.User.util.JwtUtil;
 import io.jsonwebtoken.Claims;
 import io.swagger.v3.oas.annotations.Operation;
@@ -25,6 +26,7 @@ public class GroupController {
 
   private final GroupService groupService;
   private final JwtUtil jwtUtil;
+  private final InviteTokenService inviteTokenService;
 
   // 그룹 생성
   @Operation(summary = "그룹 생성", description = "새로운 그룹을 생성하고 그룹장을 자동으로 설정")
@@ -356,5 +358,41 @@ public class GroupController {
     // 그룹 멤버 리스트 가져오기
     List<GroupMemberResponseDTO> members = groupService.getGroupMembers(groupId);
     return ResponseEntity.ok(members);
+  }
+
+  @Operation(summary = "초대 링크 생성", description = "그룹에 초대하는 초대 링크를 생성")
+  @PostMapping("/{groupId}/invite-link")
+  public ResponseEntity<?> generateInviteLink(
+      @PathVariable Long groupId,
+      @RequestHeader(value = "Authorization", required = true) String bearerToken) {
+
+    String loginId = extractLoginId(bearerToken);
+
+    // 그룹장인지 확인
+    groupService.validateGroupOwner(groupId, loginId);
+
+    // 초대 링크 토큰 생성
+    String inviteToken = inviteTokenService.generateInviteToken(groupId);
+
+    // 초대 링크 반환
+    String inviteLink = "http://localhost:8080//invite?token=" + inviteToken;
+    return ResponseEntity.ok(inviteLink);
+  }
+
+  @Operation(summary = "초대 링크 처리", description = "초대 링크를 통해 그룹에 가입")
+  @PostMapping("/join-by-invite")
+  public ResponseEntity<?> joinGroupByInvite(
+      @RequestParam String token,
+      @RequestHeader(value = "Authorization", required = true) String bearerToken) {
+
+    String loginId = extractLoginId(bearerToken);
+
+    // 토큰 유효성 확인 및 그룹 ID 추출
+    Long groupId = inviteTokenService.validateInviteToken(token);
+
+    // 그룹에 멤버 추가
+    groupService.inviteMember(groupId, loginId);
+
+    return ResponseEntity.ok("그룹에 성공적으로 가입되었습니다.");
   }
 }
