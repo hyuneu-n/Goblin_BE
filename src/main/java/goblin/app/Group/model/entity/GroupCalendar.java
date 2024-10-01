@@ -2,6 +2,7 @@ package goblin.app.Group.model.entity;
 
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.List;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -30,14 +31,12 @@ public class GroupCalendar {
   @Column(nullable = false)
   private String title;
 
+  @ElementCollection(fetch = FetchType.EAGER)
   @Column(nullable = false)
-  private LocalDateTime startDate; // 시작 날짜
+  private List<LocalDateTime> selectedDates; // 선택된 날짜들
 
   @Column(nullable = false)
-  private LocalDateTime endDate; // 종료 날짜
-
-  @Column(nullable = false)
-  private LocalTime time; // 예상 시간
+  private Integer time; // 예상 소요 시간
 
   @Column(nullable = false)
   private String place;
@@ -58,4 +57,10 @@ public class GroupCalendar {
   @ManyToOne
   @JoinColumn(name = "created_by", referencedColumnName = "login_id", nullable = false)
   private User createdBy;
+
+  @Column(nullable = false)
+  private LocalTime startTime;
+
+  @Column(nullable = false)
+  private LocalTime endTime;
 }

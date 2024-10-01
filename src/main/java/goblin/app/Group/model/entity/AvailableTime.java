@@ -8,6 +8,8 @@ import lombok.Setter;
 
 import jakarta.persistence.*;
 
+import goblin.app.User.model.entity.User;
+
 @Entity
 @Table(name = "available_time")
 @Getter
@@ -19,8 +21,12 @@ public class AvailableTime {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  @Column(nullable = false)
-  private Long userId;
+  @ManyToOne
+  @JoinColumn(
+      name = "login_id",
+      referencedColumnName = "login_id",
+      nullable = false) // User 엔티티의 loginId를 참조
+  private User user;
 
   @Column(nullable = false)
   private Long calendarId;
