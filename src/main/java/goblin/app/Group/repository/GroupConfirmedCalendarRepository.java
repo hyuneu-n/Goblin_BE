@@ -9,4 +9,6 @@ import goblin.app.Group.model.entity.GroupConfirmedCalendar;
 public interface GroupConfirmedCalendarRepository
     extends JpaRepository<GroupConfirmedCalendar, Long> {
   List<GroupConfirmedCalendar> findAllByGroupId(Long groupId);
+
+  List<GroupConfirmedCalendar> findByGroupIdAndCalendarId(Long groupId, Long calendarId);
 }

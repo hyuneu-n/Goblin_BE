@@ -1,7 +1,6 @@
 package goblin.app.Group.controller;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -136,10 +135,10 @@ public class GroupController {
   // 일정 확정
   @Operation(summary = "후보 시간 확정", description = "후보 시간 중 하나를 선택하여 일정을 확정")
   @PostMapping("/{groupId}/calendar/{calendarId}/confirm")
-  public ResponseEntity<?> confirmCandidateTime(
+  public ResponseEntity<?> confirmCalendarEvent(
       @PathVariable Long groupId,
       @PathVariable Long calendarId,
-      @RequestBody Long candidateTimeId, // 선택한 후보 시간의 id
+      @RequestBody Long selectedTimeSlotId, // 선택된 후보 시간의 ID를 받음
       @RequestHeader(value = "Authorization", required = true) String bearerToken) {
 
     String loginId = extractLoginId(bearerToken);
@@ -149,12 +148,14 @@ public class GroupController {
       return ResponseEntity.status(HttpStatus.FORBIDDEN).body("해당 그룹의 멤버가 아닙니다.");
     }
 
-    // 후보 시간으로 일정 확정
-    groupService.confirmCandidateTime(calendarId, candidateTimeId);
-    return ResponseEntity.ok("후보 시간으로 일정이 확정되었습니다.");
+    // 선택된 후보 시간을 기반으로 일정 확정
+    groupService.confirmCalendarEvent(calendarId, selectedTimeSlotId);
+    return ResponseEntity.ok("일정이 확정되었습니다.");
   }
 
-  @Operation(summary = "임의 시간 확정", description = "사용자가 임의의 시작 시간과 종료 시간을 입력하여 일정을 확정")
+  @Operation(
+      summary = "임의 시간 확정 (후보 일정 중 정하지 않을 때)",
+      description = "사용자가 임의의 시작 시간과 종료 시간을 입력하여 일정을 확정")
   @PostMapping("/{groupId}/calendar/{calendarId}/custom-confirm")
   public ResponseEntity<?> confirmCustomTime(
       @PathVariable Long groupId,
@@ -175,9 +176,10 @@ public class GroupController {
   }
 
   @Operation(summary = "확정된 일정 조회", description = "확정된 일정을 조회")
-  @GetMapping("/{groupId}/calendar/confirmed")
+  @GetMapping("/{groupId}/calendar/{calendarId}/confirmed")
   public ResponseEntity<?> getConfirmedCalendar(
       @PathVariable Long groupId,
+      @PathVariable Long calendarId,
       @RequestHeader(value = "Authorization", required = true) String bearerToken) {
 
     String loginId = extractLoginId(bearerToken);
@@ -187,7 +189,8 @@ public class GroupController {
       return ResponseEntity.status(HttpStatus.FORBIDDEN).body("해당 그룹의 멤버가 아닙니다.");
     }
 
-    List<GroupConfirmedCalendar> confirmedEvents = groupService.getConfirmedCalendar(groupId);
+    List<GroupConfirmedCalendar> confirmedEvents =
+        groupService.getConfirmedCalendar(groupId, calendarId);
     return ResponseEntity.ok(confirmedEvents);
   }
 
@@ -325,21 +328,14 @@ public class GroupController {
     }
 
     try {
-      // 최적 시간 계산 로직 수행, OptimalTimeSlot 리스트 반환
-      List<OptimalTimeSlot> optimalTimeSlots = groupService.calculateOptimalTimes(calendarId);
-
-      // OptimalTimeSlot을 TimeSlot으로 변환
-      List<TimeSlot> timeSlots =
-          optimalTimeSlots.stream()
-              .map(
-                  slot ->
-                      new TimeSlot(slot.getStartTime(), slot.getEndTime(), slot.getParticipants()))
-              .collect(Collectors.toList());
+      // 최적 시간 계산 로직 수행, TimeSlot 리스트 반환
+      List<TimeSlot> timeSlots = groupService.calculateOptimalTimes(calendarId);
 
       // 변환된 TimeSlot 리스트를 성공적으로 반환
       return ResponseEntity.ok(timeSlots);
     } catch (RuntimeException e) {
       // 에러 처리
+      log.error("최적 시간 계산 중 오류 발생: {}", e.getMessage());
       return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("최적 시간 계산 중 오류가 발생했습니다.");
     }
   }
