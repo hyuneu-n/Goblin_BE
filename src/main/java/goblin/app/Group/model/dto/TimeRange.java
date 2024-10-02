@@ -6,7 +6,10 @@ import lombok.Setter;
 @Getter
 @Setter
 public class TimeRange {
-  private String amPm; // "AM" or "PM"
-  private int hour;
-  private int minute;
+  private String startAmPm;
+  private int startHour;
+  private int startMinute;
+  private String endAmPm;
+  private int endHour;
+  private int endMinute;
 }

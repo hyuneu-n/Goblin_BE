@@ -1,6 +1,6 @@
 package goblin.app.Group.model.dto;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import lombok.Getter;
@@ -9,9 +9,13 @@ import lombok.Setter;
 @Getter
 @Setter
 public class GroupCalendarRequestDTO {
+
   private String title;
-  private List<LocalDate> dates; // 여러 날짜 선택
-  private TimeRange timeRange; // AM/PM, 시간과 분 정보
+  private List<LocalDateTime> dates; // 선택된 날짜 리스트
+  private Integer duration; // 소요 시간
+  private TimeRange timeRange; // 모든 날짜에 적용될 시간 범위
   private String place;
+  private String link;
+  private String note;
   private List<String> participants;
 }
