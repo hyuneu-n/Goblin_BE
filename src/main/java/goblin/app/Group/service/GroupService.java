@@ -349,21 +349,21 @@ public class GroupService {
             .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다: loginId = " + loginId));
 
     for (AvailableTimeSlot slot : request.getAvailableTimeSlots()) {
-      AvailableTime availableTime = new AvailableTime();
-      availableTime.setUser(user); // User 객체를 직접 설정
-      availableTime.setCalendarId(calendarId);
-
-      // String을 LocalTime으로 변환
       LocalTime startTime = LocalTime.parse(slot.getStartTime());
       LocalTime endTime = LocalTime.parse(slot.getEndTime());
-
       LocalDateTime startDateTime = LocalDateTime.of(slot.getDate(), startTime);
       LocalDateTime endDateTime = LocalDateTime.of(slot.getDate(), endTime);
 
-      availableTime.setStartTime(startDateTime);
-      availableTime.setEndTime(endDateTime);
+      // 고정 일정과 겹치는지 확인 후 저장
+      uCalSaveRequestDto saveRequest =
+          uCalSaveRequestDto
+              .builder()
+              .title("Available Time") // 저장 시 기본 제목 설정
+              .startTime(startDateTime)
+              .endTime(endDateTime)
+              .build();
 
-      availableTimeRepository.save(availableTime);
+      userCalService.submitAvailableTime(saveRequest, user); // 가능한 시간 저장
       log.info("참여자의 가능 시간 등록 완료: calendarId = {}, userId = {}", calendarId, user.getId());
     }
   }

@@ -54,6 +54,10 @@ public class UserCalendar {
   @Convert(converter = BooleanToYNConverter.class)
   private Boolean deleted = false;
 
+  // 고정 일정 여부를 나타내는 필드 추가
+  @Column(name = "is_fixed", nullable = false)
+  private Boolean isFixed = false;
+
   @Builder
   public UserCalendar(
       Category category,
@@ -61,13 +65,15 @@ public class UserCalendar {
       String title,
       String note,
       LocalDateTime startTime,
-      LocalDateTime endTime) {
+      LocalDateTime endTime,
+      Boolean isFixed) {
     this.category = category;
     this.user = user;
     this.title = title;
     this.note = note;
     this.startTime = startTime;
     this.endTime = endTime;
+    this.isFixed = isFixed;
   }
 
   public void update(Long id, String title, LocalDateTime startTime, LocalDateTime endTime) {

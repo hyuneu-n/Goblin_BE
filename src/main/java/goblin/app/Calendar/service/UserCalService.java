@@ -1,6 +1,7 @@
 package goblin.app.Calendar.service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -38,6 +39,44 @@ public class UserCalService {
             .orElseThrow(() -> new CustomException(ErrorCode.CATEGORY_NOT_FOUND));
 
     UserCalendar userCalendar = userCalRepository.save(requestDto.toEntity(currentUser, category));
+    return new uCalResponseDto(userCalendar);
+  }
+
+  // 가능한 시간과 고정 일정의 중복 여부를 확인하는 메서드 추가
+  public boolean isTimeConflictingWithFixedSchedules(
+      LocalDateTime startTime, LocalDateTime endTime, User user) {
+    List<UserCalendar> fixedSchedules = userCalRepository.findFixedSchedulesByUser(user);
+    for (UserCalendar fixedSchedule : fixedSchedules) {
+      if (startTime.isBefore(fixedSchedule.getEndTime())
+          && endTime.isAfter(fixedSchedule.getStartTime())) {
+        return true; // 겹치는 시간대가 있으면 true 반환
+      }
+    }
+    return false; // 겹치는 시간대가 없으면 false 반환
+  }
+
+  // 가능한 시간 저장
+  @Transactional
+  public uCalResponseDto submitAvailableTime(uCalSaveRequestDto requestDto, User user) {
+    // 고정 일정과 중복 여부 확인
+    if (isTimeConflictingWithFixedSchedules(
+        requestDto.getStartTime(), requestDto.getEndTime(), user)) {
+      throw new CustomException(ErrorCode.TIME_CONFLICT); // 시간 충돌 예외 처리
+    }
+
+    // 카테고리가 있을 경우 처리
+    Category category = null;
+    if (requestDto.getCategoryId() != null) {
+      category =
+          categoryRepository
+              .findById(requestDto.getCategoryId())
+              .orElseThrow(() -> new CustomException(ErrorCode.CATEGORY_NOT_FOUND));
+    }
+
+    // 가능한 시간 저장 로직 진행
+    UserCalendar userCalendar = requestDto.toEntity(user, category);
+    userCalRepository.save(userCalendar);
+
     return new uCalResponseDto(userCalendar);
   }
 
