@@ -132,4 +132,9 @@ public class UserService implements UserDetailsService {
     return new org.springframework.security.core.userdetails.User(
         user.getLoginId(), user.getLoginPw(), authorities);
   }
+
+  public String getUserRoleByLoginId(String loginId) {
+    User user = findUserByLoginId(loginId);
+    return user.getUserRole(); // 역할 정보 반환
+  }
 }
