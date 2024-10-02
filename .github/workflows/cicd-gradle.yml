@@ -54,8 +54,8 @@ jobs:
       - name: Docker Build and Push
         run: |
           docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/imagename .
-          docker push ${{ secrets.DOCKER_USERNAME }}/imagename:latest
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/goblin-server .
+          docker push ${{ secrets.DOCKER_USERNAME }}/goblin-server:latest
 
       ## Docker deploy
       - name: Deploy to Dev
