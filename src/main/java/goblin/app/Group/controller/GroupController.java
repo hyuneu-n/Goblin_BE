@@ -153,47 +153,25 @@ public class GroupController {
     return ResponseEntity.ok("일정이 확정되었습니다.");
   }
 
-  //  @Operation(
-  //      summary = "임의 시간 확정 (후보 일정 중 정하지 않을 때)",
-  //      description = "사용자가 임의의 시작 시간과 종료 시간을 입력하여 일정을 확정")
-  //  @PostMapping("/{groupId}/calendar/{calendarId}/custom-confirm")
-  //  public ResponseEntity<?> confirmCustomTime(
-  //      @PathVariable Long groupId,
-  //      @PathVariable Long calendarId,
-  //      @RequestBody TimeSlot customTime, // 임의로 입력한 시간
-  //      @RequestHeader(value = "Authorization", required = true) String bearerToken) {
-  //
-  //    String loginId = extractLoginId(bearerToken);
-  //
-  //    // 그룹에 속해 있는지 확인
-  //    if (!groupService.isUserInGroup(groupId, loginId)) {
-  //      return ResponseEntity.status(HttpStatus.FORBIDDEN).body("해당 그룹의 멤버가 아닙니다.");
-  //    }
-  //
-  //    // 임의의 시간으로 일정 확정
-  //    groupService.confirmCustomTime(calendarId, customTime);
-  //    return ResponseEntity.ok("임의의 시간으로 일정이 확정되었습니다.");
-  //  }
-  //
-  //  @Operation(summary = "확정된 일정 조회", description = "확정된 일정을 조회")
-  //  @GetMapping("/{groupId}/calendar/{calendarId}/confirmed")
-  //  public ResponseEntity<?> getConfirmedCalendar(
-  //      @PathVariable Long groupId,
-  //      @PathVariable Long calendarId,
-  //      @RequestHeader(value = "Authorization", required = true) String bearerToken) {
-  //
-  //    String loginId = extractLoginId(bearerToken);
-  //
-  //    // 그룹에 속해 있는지 확인
-  //    if (!groupService.isUserInGroup(groupId, loginId)) {
-  //      return ResponseEntity.status(HttpStatus.FORBIDDEN).body("해당 그룹의 멤버가 아닙니다.");
-  //    }
-  //
-  //    // 서비스에서 확정된 일정을 가져와서 DTO로 반환
-  //    GroupConfirmedCalendarDTO confirmedCalendar =
-  //        groupService.getConfirmedCalendar(groupId, calendarId);
-  //    return ResponseEntity.ok(confirmedCalendar);
-  //  }
+  @Operation(summary = "확정된 일정 조회", description = "확정된 일정을 조회")
+  @GetMapping("/{groupId}/calendar/{calendarId}/confirmed")
+  public ResponseEntity<?> getConfirmedCalendar(
+      @PathVariable Long groupId,
+      @PathVariable Long calendarId,
+      @RequestHeader(value = "Authorization", required = true) String bearerToken) {
+
+    String loginId = extractLoginId(bearerToken);
+
+    // 그룹에 속해 있는지 확인
+    if (!groupService.isUserInGroup(groupId, loginId)) {
+      return ResponseEntity.status(HttpStatus.FORBIDDEN).body("해당 그룹의 멤버가 아닙니다.");
+    }
+
+    // 서비스에서 확정된 일정을 가져와서 DTO로 반환
+    GroupConfirmedCalendarDTO confirmedCalendar =
+        groupService.getConfirmedCalendar(groupId, calendarId);
+    return ResponseEntity.ok(confirmedCalendar);
+  }
 
   // 새로운 일정 확정 로직 (범위 내에서 시간 선택)
   @Operation(summary = "범위 내 시간 확정", description = "선택된 후보 시간 범위 내에서 직접 시간을 설정하여 확정")

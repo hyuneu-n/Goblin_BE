@@ -368,62 +368,6 @@ public class GroupService {
     }
   }
 
-  // 참여자들의 시간대를 바탕으로 가장 많이 선택된 시간대 계산
-  //  public List<TimeSlot> calculateOptimalTimes(Long calendarId) {
-  //    List<AvailableTime> availableTimes = availableTimeRepository.findByCalendarId(calendarId);
-  //
-  //    List<TimeSlot> timeSlots = new ArrayList<>();
-  //
-  //    for (AvailableTime time : availableTimes) {
-  //      // TimeSlot에 ID 추가
-  //      TimeSlot newSlot =
-  //          TimeSlot.builder()
-  //              .id(time.getId()) // AvailableTime의 id를 사용
-  //              .startTime(time.getStartTime())
-  //              .endTime(time.getEndTime())
-  //              .participants(new ArrayList<>())
-  //              .build();
-  //
-  //      newSlot.getParticipants().add(time.getUser().getLoginId());
-  //
-  //      boolean merged = false;
-  //
-  //      for (TimeSlot existingSlot : timeSlots) {
-  //        if (isOverlapping(existingSlot, newSlot)) {
-  //          LocalDateTime newStartTime =
-  //              existingSlot.getStartTime().isBefore(newSlot.getStartTime())
-  //                  ? existingSlot.getStartTime()
-  //                  : newSlot.getStartTime();
-  //          LocalDateTime newEndTime =
-  //              existingSlot.getEndTime().isAfter(newSlot.getEndTime())
-  //                  ? existingSlot.getEndTime()
-  //                  : newSlot.getEndTime();
-  //
-  //          existingSlot.setStartTime(newStartTime);
-  //          existingSlot.setEndTime(newEndTime);
-  //
-  //          for (String participant : newSlot.getParticipants()) {
-  //            if (!existingSlot.getParticipants().contains(participant)) {
-  //              existingSlot.getParticipants().add(participant);
-  //            }
-  //          }
-  //          merged = true;
-  //          break;
-  //        }
-  //      }
-  //
-  //      if (!merged) {
-  //        timeSlots.add(newSlot);
-  //      }
-  //    }
-  //
-  //    return timeSlots.stream()
-  //        .sorted(
-  //            (slot1, slot2) ->
-  //                Integer.compare(slot2.getParticipants().size(), slot1.getParticipants().size()))
-  //        .collect(Collectors.toList());
-  //  }
-
   // 최적 시간 계산 및 합병로직
   private void mergeTimeSlots(TimeSlot existingSlot, TimeSlot newSlot) {
     existingSlot.setStartTime(
