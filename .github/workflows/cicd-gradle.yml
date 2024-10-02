@@ -1,4 +1,4 @@
-name: goblin CI-CD 
+name: goblin CI-CD
 
 on:
   push:
