@@ -14,6 +14,7 @@ import goblin.app.Calendar.model.dto.request.uCalSaveRequestDto;
 import goblin.app.Calendar.model.dto.response.uCalResponseDto;
 import goblin.app.Calendar.model.entity.UserCalRepository;
 import goblin.app.Calendar.model.entity.UserCalendar;
+import goblin.app.Calendar.repository.UserCalendarRepository;
 import goblin.app.Category.model.entity.Category;
 import goblin.app.Category.model.entity.CategoryRepository;
 import goblin.app.Common.exception.CustomException;
@@ -26,6 +27,7 @@ public class UserCalService {
 
   private final UserCalRepository userCalRepository;
   private final CategoryRepository categoryRepository;
+  private final UserCalendarRepository userCalendarRepository;
 
   // 고정 스케줄 등록
   @Transactional
@@ -143,5 +145,10 @@ public class UserCalService {
     month = (month <= 0 || month > 12) ? currentMonth : month;
 
     return new int[] {year, month};
+  }
+
+  public void save(uCalSaveRequestDto requestDto, User user, Category category) {
+    UserCalendar userCalendar = requestDto.toEntity(user, category);
+    userCalendarRepository.save(userCalendar);
   }
 }

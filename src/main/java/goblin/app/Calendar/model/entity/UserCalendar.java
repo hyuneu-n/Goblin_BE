@@ -31,7 +31,7 @@ public class UserCalendar {
   @JoinColumn(name = "user_id")
   private User user;
 
-  @JoinColumn(name = "category_id")
+  @JoinColumn(name = "category_id", nullable = true) // Category가 없을 때 null로 허용
   @ManyToOne(fetch = FetchType.LAZY)
   @OnDelete(action = OnDeleteAction.CASCADE)
   private Category category;
