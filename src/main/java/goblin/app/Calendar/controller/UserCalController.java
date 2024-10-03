@@ -20,6 +20,7 @@ import goblin.app.User.model.entity.User;
 import goblin.app.User.repository.UserRepository;
 import goblin.app.User.util.JwtUtil;
 import io.jsonwebtoken.Claims;
+import io.swagger.v3.oas.annotations.Operation;
 
 @RestController
 @RequestMapping("/api/calendar/user")
@@ -32,7 +33,8 @@ public class UserCalController {
 
   @Autowired private final UserRepository userRepository;
 
-  // 유저 캘린더 저장
+  // 일반 스케쥴 등록
+  @Operation(summary = "일반 일정 등록", description = "사용자의 새로운 일정을 캘린더에 저장")
   @PostMapping("/save")
   public ResponseEntity<uCalResponseDto> save(
       @RequestBody @Valid uCalSaveRequestDto requestDto,
@@ -48,6 +50,7 @@ public class UserCalController {
   }
 
   // 유저 캘린더 수정
+  @Operation(summary = "유저 캘린더 수정", description = "기존 캘린더 일정 수정")
   @PutMapping("/edit")
   public ResponseEntity<uCalResponseDto> edit(
       @RequestBody @Valid uCalEditRequestDto requestDto,
@@ -63,6 +66,7 @@ public class UserCalController {
   }
 
   // 유저 캘린더 삭제
+  @Operation(summary = "유저 캘린더 삭제", description = "사용자의 특정 일정을 캘린더에서 삭제")
   @DeleteMapping("/delete/{scheduleId}")
   public ResponseEntity<uCalResponseDto> delete(
       @PathVariable Long scheduleId,
@@ -78,6 +82,7 @@ public class UserCalController {
   }
 
   // 특정 달의 캘린더 조회
+  @Operation(summary = "월별 캘린더 조회", description = "사용자가 입력한 특정 년도와 월의 일정을 조회")
   @GetMapping("/view-month")
   public ResponseEntity<List<uCalResponseDto>> viewByMonth(
       @RequestParam int year,
@@ -94,6 +99,7 @@ public class UserCalController {
   }
 
   // 특정 일의 캘린더 조회
+  @Operation(summary = "일별 캘린더 조회", description = "사용자가 입력한 특정 년, 월, 일의 일정을 조회")
   @GetMapping("/view-day")
   public ResponseEntity<List<uCalResponseDto>> viewByDay(
       @RequestParam int year,
@@ -111,6 +117,7 @@ public class UserCalController {
   }
 
   // 카테고리별 스케줄 조회
+  @Operation(summary = "카테고리별 스케줄 조회", description = "카테고리별로 사용자의 일정을 조회")
   @GetMapping("/category/{categoryId}")
   public ResponseEntity<List<uCalResponseDto>> viewByCategory(
       @PathVariable Long categoryId,
@@ -125,7 +132,9 @@ public class UserCalController {
     }
   }
 
-  // 고정 스케줄 검색
+  // 고정 스케줄 검색 -> 다시 짜야할 듯
+  // 현재 로직은 고정 스케쥴 검색이 아니라 개인 스케쥴 검색인 듯
+  @Operation(summary = "고정 스케줄 검색", description = "키워드를 통해 사용자의 고정 스케줄을 검색")
   @GetMapping("/search")
   public ResponseEntity<List<uCalResponseDto>> searchSchedules(
       @RequestParam String keyword,

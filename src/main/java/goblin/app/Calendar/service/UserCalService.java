@@ -30,7 +30,7 @@ public class UserCalService {
   private final CategoryRepository categoryRepository;
   private final UserCalendarRepository userCalendarRepository;
 
-  // 고정 스케줄 등록
+  // 일반 스케쥴 등록
   @Transactional
   public uCalResponseDto save(uCalSaveRequestDto requestDto, User currentUser) {
     Category category =
@@ -189,5 +189,21 @@ public class UserCalService {
   public void save(uCalSaveRequestDto requestDto, User user, Category category) {
     UserCalendar userCalendar = requestDto.toEntity(user, category);
     userCalendarRepository.save(userCalendar);
+  }
+
+  public boolean checkForTimeConflicts(LocalDateTime startTime, LocalDateTime endTime, User user) {
+    // 사용자의 고정된 일정들을 조회
+    List<UserCalendar> fixedSchedules = userCalRepository.findFixedSchedulesByUser(user);
+
+    // 고정된 일정들과 입력된 시간 범위가 겹치는지 확인
+    for (UserCalendar fixedSchedule : fixedSchedules) {
+      if (startTime.isBefore(fixedSchedule.getEndTime())
+          && endTime.isAfter(fixedSchedule.getStartTime())) {
+        return true; // 겹치는 일정이 존재하면 true 반환
+      }
+    }
+
+    // 겹치는 일정이 없으면 false 반환
+    return false;
   }
 }

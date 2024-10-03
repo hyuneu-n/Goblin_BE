@@ -36,7 +36,7 @@ public class CategoryController {
 
   // 카테고리 저장
   @PostMapping("/save")
-  @Operation(summary = "카테고리 저장", description = "새로운 카테고리를 저장합니다.")
+  @Operation(summary = "카테고리 생성", description = "새로운 카테고리를 저장합니다.")
   public ResponseEntity<categoryResponseDto> save(
       @RequestBody categorySaveRequestDto requestDto,
       @RequestHeader(value = "Authorization", required = false) String bearerToken) {

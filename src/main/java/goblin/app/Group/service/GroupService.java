@@ -14,8 +14,6 @@ import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import goblin.app.Calendar.model.dto.request.uCalSaveRequestDto;
-import goblin.app.Calendar.model.entity.UserCalendar;
-import goblin.app.Calendar.repository.UserCalendarRepository;
 import goblin.app.Calendar.service.UserCalService;
 import goblin.app.Category.model.entity.Category;
 import goblin.app.Category.model.entity.CategoryRepository;
@@ -30,7 +28,6 @@ import goblin.app.Group.model.entity.AvailableTime;
 import goblin.app.Group.model.entity.Group;
 import goblin.app.Group.model.entity.GroupCalendar;
 import goblin.app.Group.model.entity.GroupCalendarParticipant;
-import goblin.app.Group.model.entity.GroupConfirmedCalendar;
 import goblin.app.Group.model.entity.GroupMember;
 import goblin.app.Group.model.entity.OptimalTimeSlot;
 import goblin.app.Group.repository.AvailableTimeRepository;
@@ -55,10 +52,9 @@ public class GroupService {
   private final UserRepository userRepository;
   private final AvailableTimeRepository availableTimeRepository;
   private final GroupConfirmedCalendarRepository groupConfirmedCalendarRepository;
-  private final UserCalService userCalService; // 개인 캘린더 서비스
   private final OptimalTimeSlotRepository optimalTimeSlotRepository;
   private final CategoryRepository categoryRepository;
-  private final UserCalendarRepository userCalendarRepository;
+  private final UserCalService userCalService;
 
   // 그룹 생성 로직
   public void createGroup(String groupName, String loginId) {
@@ -66,6 +62,11 @@ public class GroupService {
         userRepository
             .findByLoginId(loginId)
             .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다: loginId=" + loginId));
+
+    // 그룹명 중복 체크
+    if (groupRepository.existsByGroupName(groupName)) {
+      throw new RuntimeException("이미 존재하는 그룹명입니다: groupName=" + groupName);
+    }
 
     // 그룹 생성
     Group group = new Group();
@@ -349,21 +350,21 @@ public class GroupService {
             .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다: loginId = " + loginId));
 
     for (AvailableTimeSlot slot : request.getAvailableTimeSlots()) {
+      AvailableTime availableTime = new AvailableTime();
+      availableTime.setUser(user); // User 객체를 직접 설정
+      availableTime.setCalendarId(calendarId);
+
+      // String을 LocalTime으로 변환
       LocalTime startTime = LocalTime.parse(slot.getStartTime());
       LocalTime endTime = LocalTime.parse(slot.getEndTime());
+
       LocalDateTime startDateTime = LocalDateTime.of(slot.getDate(), startTime);
       LocalDateTime endDateTime = LocalDateTime.of(slot.getDate(), endTime);
 
-      // 고정 일정과 겹치는지 확인 후 저장
-      uCalSaveRequestDto saveRequest =
-          uCalSaveRequestDto
-              .builder()
-              .title("Available Time") // 저장 시 기본 제목 설정
-              .startTime(startDateTime)
-              .endTime(endDateTime)
-              .build();
+      availableTime.setStartTime(startDateTime);
+      availableTime.setEndTime(endDateTime);
 
-      userCalService.submitAvailableTime(saveRequest, user); // 가능한 시간 저장
+      availableTimeRepository.save(availableTime);
       log.info("참여자의 가능 시간 등록 완료: calendarId = {}, userId = {}", calendarId, user.getId());
     }
   }
@@ -615,25 +616,24 @@ public class GroupService {
             .endTime(endTime)
             .build();
 
-    // 로그 추가로 생성된 DTO의 필드 값 확인
     log.info("uCalSaveRequestDto 생성: {}", requestDto);
 
     userCalService.save(requestDto, user, category); // category가 null일 수 있음
   }
 
-  // 임의 시간 확정 로직
-  public void confirmCustomTime(Long calendarId, TimeSlot customTime) {
-    // 임의 시간 확인 및 확정
-    GroupConfirmedCalendar confirmedCalendar = new GroupConfirmedCalendar();
-    confirmedCalendar.setCalendarId(calendarId);
-    confirmedCalendar.setGroupId(calendarId); // groupId로 변경 필요
-
-    // 임의 시간 설정
-    confirmedCalendar.setConfirmedStartTime(customTime.getStartTime());
-    confirmedCalendar.setConfirmedEndTime(customTime.getEndTime());
-
-    groupConfirmedCalendarRepository.save(confirmedCalendar);
-  }
+  //  // 임의 시간 확정 로직
+  //  public void confirmCustomTime(Long calendarId, TimeSlot customTime) {
+  //    // 임의 시간 확인 및 확정
+  //    GroupConfirmedCalendar confirmedCalendar = new GroupConfirmedCalendar();
+  //    confirmedCalendar.setCalendarId(calendarId);
+  //    confirmedCalendar.setGroupId(calendarId); // groupId로 변경 필요
+  //
+  //    // 임의 시간 설정
+  //    confirmedCalendar.setConfirmedStartTime(customTime.getStartTime());
+  //    confirmedCalendar.setConfirmedEndTime(customTime.getEndTime());
+  //
+  //    groupConfirmedCalendarRepository.save(confirmedCalendar);
+  //  }
 
   // 확정일정 조회
   public GroupConfirmedCalendarDTO getConfirmedCalendar(Long groupId, Long calendarId) {
@@ -660,12 +660,5 @@ public class GroupService {
                 new GroupMemberResponseDTO(
                     member.getUser().getUsername(), member.getUser().getLoginId()))
         .collect(Collectors.toList());
-  }
-
-  public void save(uCalSaveRequestDto requestDto, User user, Category category) {
-    // 유저 캘린더 저장 로직
-    UserCalendar userCalendar = requestDto.toEntity(user, category);
-
-    userCalendarRepository.save(userCalendar); // 저장
   }
 }
