@@ -1,16 +1,19 @@
 package goblin.app.Group.model.dto;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 
-@AllArgsConstructor
-@Setter
 @Getter
+@Setter
 public class ConfirmTimeRangeRequest {
-  private Long optimalTimeSlotId; // 최적 시간 슬롯의 ID
-  private LocalDateTime startTime; // 사용자가 선택한 시작 시간
-  private LocalDateTime endTime; // 사용자가 선택한 종료 시간
+  private Long optimalTimeSlotId;
+  private LocalDate date; // 날짜
+  private String startAmPm; // 시작 시간 AM/PM
+  private int startHour; // 시작 시간 (시)
+  private int startMinute; // 시작 시간 (분)
+  private String endAmPm; // 종료 시간 AM/PM
+  private int endHour; // 종료 시간 (시)
+  private int endMinute; // 종료 시간 (분)
 }

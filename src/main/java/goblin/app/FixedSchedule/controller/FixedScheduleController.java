@@ -5,12 +5,18 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import jakarta.validation.Valid;
+
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import goblin.app.Common.exception.CustomException;
 import goblin.app.FixedSchedule.model.dto.FixedScheduleRequestDTO;
 import goblin.app.FixedSchedule.model.dto.FixedScheduleResponseDTO;
 import goblin.app.FixedSchedule.service.FixedScheduleService;
+import goblin.app.User.model.entity.User;
+import goblin.app.User.repository.UserRepository;
 import goblin.app.User.util.JwtUtil;
 import io.jsonwebtoken.Claims;
 import io.swagger.v3.oas.annotations.Operation;
@@ -23,20 +29,22 @@ public class FixedScheduleController {
 
   private final FixedScheduleService fixedScheduleService;
   private final JwtUtil jwtUtil;
+  private final UserRepository userRepository;
 
   // 고정 일정 생성
-  @Operation(summary = "고정 일정 생성", description = "사용자의 고정 일정을 등록")
   @PostMapping("/create")
-  public ResponseEntity<?> createFixedSchedule(
-      @RequestBody FixedScheduleRequestDTO dto,
+  @Operation(summary = "고정 일정 생성", description = "사용자의 고정 일정을 등록합니다.")
+  public ResponseEntity<FixedScheduleResponseDTO> createFixedSchedule(
+      @RequestBody @Valid FixedScheduleRequestDTO requestDto,
       @RequestHeader(value = "Authorization", required = false) String bearerToken) {
     try {
-      String loginId = extractLoginId(bearerToken);
-      fixedScheduleService.createFixedSchedule(dto, loginId);
-      return ResponseEntity.ok("고정 일정이 등록되었습니다.");
-    } catch (RuntimeException e) {
-      log.error("고정 일정 등록 실패: {}", e.getMessage());
-      return ResponseEntity.badRequest().body(e.getMessage());
+      User user = getUserFromToken(bearerToken);
+      FixedScheduleResponseDTO responseDto =
+          fixedScheduleService.createFixedSchedule(requestDto, user);
+      return ResponseEntity.status(HttpStatus.OK).body(responseDto);
+    } catch (CustomException e) {
+      log.error("고정 일정 생성 실패: {}", e.getMessage());
+      return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
     }
   }
 
@@ -97,5 +105,19 @@ public class FixedScheduleController {
       log.error("고정 일정 삭제 실패: {}", e.getMessage());
       return ResponseEntity.badRequest().body(e.getMessage());
     }
+  }
+
+  // JWT 토큰에서 User 객체 추출하는 메서드
+  private User getUserFromToken(String bearerToken) {
+    if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
+      String token = bearerToken.substring(7);
+      Claims claims = jwtUtil.getAllClaimsFromToken(token);
+      String loginId = claims.getId();
+
+      return userRepository
+          .findByLoginId(loginId)
+          .orElseThrow(() -> new RuntimeException("User not found"));
+    }
+    throw new RuntimeException("Authorization token is missing or invalid");
   }
 }

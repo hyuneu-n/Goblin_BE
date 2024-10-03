@@ -1,5 +1,7 @@
 package goblin.app.Group.service;
 
+import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
@@ -15,12 +17,15 @@ import org.springframework.stereotype.Service;
 
 import goblin.app.Calendar.model.dto.request.uCalSaveRequestDto;
 import goblin.app.Calendar.service.UserCalService;
-import goblin.app.Category.model.entity.CategoryRepository;
+import goblin.app.FixedSchedule.repository.FixedScheduleRepository;
 import goblin.app.Group.model.dto.AvailableTimeRequestDTO;
 import goblin.app.Group.model.dto.AvailableTimeSlot;
+import goblin.app.Group.model.dto.ConfirmTimeRangeRequest;
 import goblin.app.Group.model.dto.GroupCalendarRequestDTO;
+import goblin.app.Group.model.dto.GroupCalendarResponseDTO;
 import goblin.app.Group.model.dto.GroupConfirmedCalendarDTO;
 import goblin.app.Group.model.dto.GroupMemberResponseDTO;
+import goblin.app.Group.model.dto.GroupResponseDto;
 import goblin.app.Group.model.dto.TimeRange;
 import goblin.app.Group.model.dto.TimeSlot;
 import goblin.app.Group.model.entity.AvailableTime;
@@ -32,7 +37,6 @@ import goblin.app.Group.model.entity.OptimalTimeSlot;
 import goblin.app.Group.repository.AvailableTimeRepository;
 import goblin.app.Group.repository.GroupCalendarParticipantRepository;
 import goblin.app.Group.repository.GroupCalendarRepository;
-import goblin.app.Group.repository.GroupConfirmedCalendarRepository;
 import goblin.app.Group.repository.GroupMemberRepository;
 import goblin.app.Group.repository.GroupRepository;
 import goblin.app.Group.repository.OptimalTimeSlotRepository;
@@ -50,10 +54,9 @@ public class GroupService {
   private final GroupCalendarParticipantRepository groupCalendarParticipantRepository;
   private final UserRepository userRepository;
   private final AvailableTimeRepository availableTimeRepository;
-  private final GroupConfirmedCalendarRepository groupConfirmedCalendarRepository;
   private final OptimalTimeSlotRepository optimalTimeSlotRepository;
-  private final CategoryRepository categoryRepository;
   private final UserCalService userCalService;
+  private final FixedScheduleRepository fixedScheduleRepository;
 
   // 그룹 생성 로직
   public void createGroup(String groupName, String loginId) {
@@ -121,6 +124,12 @@ public class GroupService {
             .findByLoginId(creatorLoginId)
             .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다: loginId=" + creatorLoginId));
 
+    // 그룹 찾기
+    Group group =
+        groupRepository
+            .findById(groupId)
+            .orElseThrow(() -> new RuntimeException("그룹을 찾을 수 없습니다: groupId=" + groupId));
+
     if (!isUserInGroup(groupId, creatorLoginId)) {
       throw new RuntimeException("방장이 아닌 사용자는 일정을 생성할 수 없습니다.");
     }
@@ -138,7 +147,7 @@ public class GroupService {
             request.getTimeRange().getEndMinute());
 
     GroupCalendar groupCalendar = new GroupCalendar();
-    groupCalendar.setGroupId(groupId);
+    groupCalendar.setGroup(group); // Group 객체 설정
     groupCalendar.setTitle(request.getTitle());
     groupCalendar.setSelectedDates(request.getDates()); // 선택된 날짜들 설정
     groupCalendar.setTime(request.getDuration()); // 예상 소요 시간 설정
@@ -148,7 +157,7 @@ public class GroupService {
     groupCalendar.setLink(request.getLink());
     groupCalendar.setNote(request.getNote());
     groupCalendar.setCreatedDate(LocalDateTime.now());
-    groupCalendar.setCreatedBy(creator);
+    groupCalendar.setCreatedBy(creator); // 일정 생성자를 주최자로 설정
 
     groupCalendarRepository.save(groupCalendar);
 
@@ -192,31 +201,6 @@ public class GroupService {
 
     return groupMemberRepository.findByGroupIdAndUser(groupId, user).isPresent();
   }
-  // 그룹 멤버 삭제
-  public void removeMember(Long groupId, Long memberId) {
-    GroupMember groupMember =
-        groupMemberRepository
-            .findById(memberId)
-            .orElseThrow(() -> new RuntimeException("멤버를 찾을 수 없습니다: memberId=" + memberId));
-
-    if (!groupMember.getGroupId().equals(groupId)) {
-      throw new RuntimeException("해당 그룹에 속하지 않은 멤버입니다.");
-    }
-
-    groupMemberRepository.delete(groupMember);
-    log.info("그룹 멤버가 삭제되었습니다: memberId = {}, groupId = {}", memberId, groupId);
-  }
-
-  // 그룹명 수정
-  public void updateGroupName(Long groupId, String groupName) {
-    Group group =
-        groupRepository
-            .findById(groupId)
-            .orElseThrow(() -> new RuntimeException("그룹을 찾을 수 없습니다: groupId=" + groupId));
-    group.setGroupName(groupName);
-    groupRepository.save(group);
-    log.info("그룹명이 수정되었습니다: groupId = {}, groupName = {}", groupId, groupName);
-  }
 
   // 메모 추가
   public void addMemo(Long calendarId, String memo) {
@@ -230,32 +214,68 @@ public class GroupService {
   }
 
   // 그룹 조회
-  public List<Group> getUserGroups(String loginId) {
+  public List<GroupResponseDto> getUserGroups(String loginId) {
     User user =
         userRepository
             .findByLoginId(loginId)
             .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다: loginId = " + loginId));
 
     // 유저가 속한 그룹(방장, 멤버 포함) 조회 + 삭제된 그룹은 조회 안됨
-    return groupRepository.findAllByUserAsMember(user);
+    List<Group> groups = groupRepository.findAllByUserAsMember(user);
+
+    // Group 엔티티를 GroupResponseDto로 변환하여 반환
+    return groups.stream()
+        .map(
+            group ->
+                new GroupResponseDto(
+                    group.getGroupId(), group.getGroupName(), group.getCreatedBy().getUsername()))
+        .collect(Collectors.toList());
   }
 
-  // 일정 삭제
-  public void deleteCalendarEvent(Long calendarId) {
+  // 일정 삭제 로직
+  public void deleteCalendarEvent(Long calendarId, String loginId) {
     GroupCalendar calendar =
         groupCalendarRepository
             .findById(calendarId)
             .orElseThrow(() -> new RuntimeException("일정을 찾을 수 없습니다: calendarId=" + calendarId));
-    calendar.setDeleted(true); // Soft Delete 플래그 설정
+
+    // 주최자 권한 확인
+    validateEventOwner(calendar, loginId);
+
+    calendar.setDeleted(true); // Soft Delete
     groupCalendarRepository.save(calendar);
     log.info("일정이 삭제되었습니다 (Soft Delete): calendarId = {}", calendarId);
   }
 
-  // 그룹 캘린더 조회
   @Transactional
-  public List<GroupCalendar> getGroupCalendar(Long groupId) {
-    // 삭제되지 않은 그룹 캘린더 목록을 그룹 ID를 기준으로 조회
-    return groupCalendarRepository.findAllByGroupIdAndNotDeleted(groupId);
+  public List<GroupCalendarResponseDTO> getGroupCalendar(Long groupId) {
+    Group group =
+        groupRepository
+            .findById(groupId)
+            .orElseThrow(() -> new RuntimeException("그룹을 찾을 수 없습니다: groupId=" + groupId));
+    List<GroupCalendar> calendars = groupCalendarRepository.findAllByGroup(group);
+
+    return calendars.stream()
+        .map(
+            calendar ->
+                GroupCalendarResponseDTO.builder()
+                    .id(calendar.getId())
+                    .groupName(calendar.getGroup().getGroupName())
+                    .title(calendar.getTitle())
+                    .selectedDates(
+                        calendar.getSelectedDates().stream()
+                            .map(LocalDate::toString)
+                            .collect(Collectors.toList()))
+                    .time(calendar.getTime())
+                    .place(calendar.getPlace())
+                    .link(calendar.getLink())
+                    .note(calendar.getNote())
+                    .confirmed(calendar.isConfirmed())
+                    .createdBy(calendar.getCreatedBy().getUsername()) // 주최자 username 반환
+                    .startTime(calendar.getStartTime())
+                    .endTime(calendar.getEndTime())
+                    .build())
+        .collect(Collectors.toList());
   }
 
   // 그룹 일정 수정 로직
@@ -267,10 +287,8 @@ public class GroupService {
             .findById(calendarId)
             .orElseThrow(() -> new RuntimeException("일정을 찾을 수 없습니다: calendarId = " + calendarId));
 
-    // 일정 수정 권한 확인 (방장만 수정 가능)
-    if (!calendar.getCreatedBy().getLoginId().equals(loginId)) {
-      throw new RuntimeException("일정을 수정할 권한이 없습니다.");
-    }
+    // 주최자 권한 확인
+    validateEventOwner(calendar, loginId);
 
     // 일정 정보 업데이트
     calendar.setTitle(request.getTitle());
@@ -292,7 +310,7 @@ public class GroupService {
 
     groupCalendarRepository.save(calendar); // 수정된 일정 저장
 
-    // 일정에 참가자 재설정 (기존 참여자를 모두 삭제하고 다시 추가)
+    // 일정에 참가자 재설정
     groupCalendarParticipantRepository.deleteAllByCalendarId(calendarId);
 
     for (String participantLoginId : request.getParticipants()) {
@@ -341,7 +359,7 @@ public class GroupService {
     log.info("그룹 멤버가 삭제되었습니다: loginId = {}, groupId = {}", memberLoginId, groupId);
   }
 
-  // 가능한 시간대 등록 로직
+  // 가능 시간 제출
   public void setAvailableTime(Long calendarId, AvailableTimeRequestDTO request, String loginId) {
     User user =
         userRepository
@@ -349,112 +367,118 @@ public class GroupService {
             .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다: loginId = " + loginId));
 
     for (AvailableTimeSlot slot : request.getAvailableTimeSlots()) {
-      AvailableTime availableTime = new AvailableTime();
-      availableTime.setUser(user); // User 객체를 직접 설정
-      availableTime.setCalendarId(calendarId);
-
-      // String을 LocalTime으로 변환
-      LocalTime startTime = LocalTime.parse(slot.getStartTime());
-      LocalTime endTime = LocalTime.parse(slot.getEndTime());
+      // AM/PM 정보를 포함한 시간 변환
+      LocalTime startTime =
+          convertToLocalTime(slot.getStartAmPm(), slot.getStartHour(), slot.getStartMinute());
+      LocalTime endTime =
+          convertToLocalTime(slot.getEndAmPm(), slot.getEndHour(), slot.getEndMinute());
 
       LocalDateTime startDateTime = LocalDateTime.of(slot.getDate(), startTime);
       LocalDateTime endDateTime = LocalDateTime.of(slot.getDate(), endTime);
 
+      // 날짜의 요일을 추출
+      DayOfWeek dayOfWeek = slot.getDate().getDayOfWeek();
+
+      // 고정 일정과 겹치는지 확인 (해당 요일에 고정 일정이 있고 시간이 겹치는지 검사)
+      boolean isConflict =
+          fixedScheduleRepository
+              .existsByUserIdAndDayOfWeekContainingAndStartTimeLessThanEqualAndEndTimeGreaterThanEqual(
+                  user.getId(), dayOfWeek, endTime, startTime);
+
+      if (isConflict) {
+        log.error(
+            "고정 일정과 겹칩니다: userId = {}, calendarId = {}, startTime = {}, endTime = {}",
+            user.getId(),
+            calendarId,
+            startDateTime,
+            endDateTime);
+        throw new RuntimeException("고정 일정과 겹치는 시간이 존재합니다."); // 예외 발생
+      }
+
+      // 가능 시간 저장
+      AvailableTime availableTime = new AvailableTime();
+      availableTime.setUser(user);
+      availableTime.setCalendarId(calendarId);
       availableTime.setStartTime(startDateTime);
       availableTime.setEndTime(endDateTime);
-
       availableTimeRepository.save(availableTime);
       log.info("참여자의 가능 시간 등록 완료: calendarId = {}, userId = {}", calendarId, user.getId());
     }
   }
 
+  // 가능 시간 수정
+  public void updateAvailableTime(
+      Long calendarId, AvailableTimeRequestDTO request, String loginId) {
+    User user =
+        userRepository
+            .findByLoginId(loginId)
+            .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다: loginId = " + loginId));
+
+    // 사용자의 기존 가능한 시간 삭제
+    availableTimeRepository.deleteByCalendarIdAndUserId(calendarId, user.getId());
+    log.info("기존 가능한 시간이 삭제되었습니다: calendarId = {}, userId = {}", calendarId, user.getId());
+
+    // 새로운 가능 시간 추가 (기존 setAvailableTime 메서드를 재사용)
+    setAvailableTime(calendarId, request, loginId);
+  }
+
   // 최적 시간 계산 및 합병로직
   private void mergeTimeSlots(TimeSlot existingSlot, TimeSlot newSlot) {
-    existingSlot.setStartTime(
-        existingSlot.getStartTime().isBefore(newSlot.getStartTime())
+    // 겹치는 시간을 계산
+    LocalDateTime maxStartTime =
+        existingSlot.getStartTime().isAfter(newSlot.getStartTime())
             ? existingSlot.getStartTime()
-            : newSlot.getStartTime());
+            : newSlot.getStartTime();
 
-    existingSlot.setEndTime(
-        existingSlot.getEndTime().isAfter(newSlot.getEndTime())
+    LocalDateTime minEndTime =
+        existingSlot.getEndTime().isBefore(newSlot.getEndTime())
             ? existingSlot.getEndTime()
-            : newSlot.getEndTime());
+            : newSlot.getEndTime();
 
-    // 새로운 참가자들을 기존 슬롯에 추가
-    for (String participant : newSlot.getParticipants()) {
-      if (!existingSlot.getParticipants().contains(participant)) {
-        existingSlot.getParticipants().add(participant);
-      }
-    }
-  }
+    // 겹치는 시간이 있으면 병합
+    if (maxStartTime.isBefore(minEndTime)) {
+      existingSlot.setStartTime(maxStartTime);
+      existingSlot.setEndTime(minEndTime);
 
-  // 최적시간계산
-  public List<TimeSlot> calculateOptimalTimes(Long calendarId) {
-    List<AvailableTime> availableTimes = availableTimeRepository.findByCalendarId(calendarId);
-
-    // AvailableTime을 TimeSlot으로 변환한 리스트
-    List<TimeSlot> timeSlots =
-        availableTimes.stream().map(this::toTimeSlot).collect(Collectors.toList());
-
-    // 병합된 시간 슬롯을 담을 리스트
-    List<TimeSlot> mergedTimeSlots = new ArrayList<>();
-
-    // 시간 슬롯을 하나씩 비교하며 병합
-    for (TimeSlot newSlot : timeSlots) {
-      boolean merged = false;
-
-      for (TimeSlot existingSlot : mergedTimeSlots) {
-        if (isOverlapping(existingSlot, newSlot)) {
-          // 겹치는 시간대가 있으면 병합
-          mergeTimeSlots(existingSlot, newSlot);
-          merged = true;
-          break;
+      // 새로운 참가자 추가
+      for (String participant : newSlot.getParticipants()) {
+        if (!existingSlot.getParticipants().contains(participant)) {
+          existingSlot.getParticipants().add(participant);
         }
       }
-
-      if (!merged) {
-        // 겹치는 시간대가 없으면 새로운 시간대를 추가
-        mergedTimeSlots.add(newSlot);
-      }
     }
-
-    return mergedTimeSlots;
   }
 
-  private TimeSlot toTimeSlot(AvailableTime availableTime) {
-    return TimeSlot.builder()
-        .startTime(availableTime.getStartTime())
-        .endTime(availableTime.getEndTime())
-        .participants(List.of(availableTime.getUser().getLoginId()))
-        .build();
-  }
-
-  // 최적 시간 계산 및 후보 저장
   public List<TimeSlot> calculateOptimalTimesAndSave(Long calendarId) {
     log.info("최적 시간 계산 및 저장 시작. calendarId: {}", calendarId);
 
+    // 1. 모든 참가자의 가능한 시간을 가져옴
     List<AvailableTime> availableTimes = availableTimeRepository.findByCalendarId(calendarId);
     log.info("조회된 AvailableTime 개수: {}", availableTimes.size());
 
+    // 2. 시간대 병합을 위한 리스트
     List<TimeSlot> timeSlots = new ArrayList<>();
 
+    // 3. 참가자의 가능한 시간대를 TimeSlot으로 변환하고 병합
     for (AvailableTime time : availableTimes) {
       TimeSlot newSlot =
           TimeSlot.builder()
-              .id(time.getId())
+              .id(time.getId()) // 실제 ID를 저장
               .startTime(time.getStartTime())
               .endTime(time.getEndTime())
               .participants(new ArrayList<>())
               .build();
-      newSlot.getParticipants().add(time.getUser().getLoginId());
+
+      // 참가자를 추가 (loginId 대신 username을 사용)
+      newSlot.getParticipants().add(time.getUser().getUsername());
 
       log.info("새로운 시간 슬롯 생성: {}", newSlot);
 
-      // 기존 슬롯과 병합
+      // 4. 기존 슬롯과 비교하여 병합할 수 있으면 병합, 아니면 새로운 슬롯으로 추가
       boolean merged = false;
       for (TimeSlot existingSlot : timeSlots) {
         if (isOverlapping(existingSlot, newSlot)) {
-          mergeTimeSlots(existingSlot, newSlot); // 병합 로직
+          mergeTimeSlots(existingSlot, newSlot); // 겹치는 시간 병합
           merged = true;
           log.info("슬롯 병합 완료: {}", existingSlot);
           break;
@@ -467,30 +491,33 @@ public class GroupService {
       }
     }
 
-    log.info("최적 시간 슬롯 개수: {}", timeSlots.size());
+    // 5. 두 명 이상의 참가자가 겹치는 시간대만 필터링
+    List<TimeSlot> filteredTimeSlots =
+        timeSlots.stream()
+            .filter(slot -> slot.getParticipants().size() >= 2) // 두 명 이상인 시간대만 필터링
+            .collect(Collectors.toList());
 
-    // 후보 시간 저장
-    for (TimeSlot slot : timeSlots) {
+    log.info("최적 시간 슬롯 개수 (두 명 이상 겹침): {}", filteredTimeSlots.size());
+
+    // 6. 병합된 시간대 저장
+    for (TimeSlot slot : filteredTimeSlots) {
       OptimalTimeSlot optimalSlot = new OptimalTimeSlot();
       optimalSlot.setCalendarId(calendarId);
       optimalSlot.setStartTime(slot.getStartTime());
       optimalSlot.setEndTime(slot.getEndTime());
-      optimalSlot.setParticipants(slot.getParticipants());
-      optimalTimeSlotRepository.save(optimalSlot);
+      optimalSlot.setParticipants(slot.getParticipants()); // username 반환
+      optimalTimeSlotRepository.save(optimalSlot); // 저장 후 ID값 설정
 
+      slot.setId(optimalSlot.getId()); // 저장된 PK 값 가져오기
       log.info("OptimalTimeSlot 저장 완료: {}", optimalSlot);
     }
 
-    return timeSlots;
+    return filteredTimeSlots;
   }
 
-  // 선택한 시간 범위 내에서 시간 확정
+  // 범위 내에서 사용자 지정 시간 확정
   public void confirmCustomTimeInRange(
-      Long calendarId,
-      Long optimalTimeSlotId,
-      LocalDateTime selectedStartTime,
-      LocalDateTime selectedEndTime,
-      String loginId) {
+      Long calendarId, Long optimalTimeSlotId, ConfirmTimeRangeRequest request, String loginId) {
 
     // null 체크 추가
     if (optimalTimeSlotId == null) {
@@ -504,25 +531,31 @@ public class GroupService {
     }
 
     log.info(
-        "confirmCustomTimeInRange 호출됨. calendarId: {}, optimalTimeSlotId: {}, selectedStartTime: {}, selectedEndTime: {}, loginId: {}",
+        "confirmCustomTimeInRange 호출됨. calendarId: {}, optimalTimeSlotId: {}, request: {}, loginId: {}",
         calendarId,
         optimalTimeSlotId,
-        selectedStartTime,
-        selectedEndTime,
+        request,
         loginId);
 
     // 최적 시간 후보에서 선택된 슬롯 확인
     OptimalTimeSlot optimalSlot =
         optimalTimeSlotRepository
             .findById(optimalTimeSlotId)
-            .orElseThrow(
-                () ->
-                    new RuntimeException(
-                        "선택한 시간 슬롯을 찾을 수 없습니다. optimalTimeSlotId: " + optimalTimeSlotId));
+            .orElseThrow(() -> new RuntimeException("선택한 시간 슬롯을 찾을 수 없습니다."));
 
     log.info("선택한 OptimalTimeSlot 조회 성공: {}", optimalSlot);
 
-    // 선택한 시간 범위가 유효한지 확인
+    // 선택한 시간 범위가 유효한지 확인 (startTime, endTime 변환 필요)
+    LocalDateTime selectedStartTime =
+        LocalDateTime.of(
+            request.getDate(),
+            convertToLocalTime(
+                request.getStartAmPm(), request.getStartHour(), request.getStartMinute()));
+    LocalDateTime selectedEndTime =
+        LocalDateTime.of(
+            request.getDate(),
+            convertToLocalTime(request.getEndAmPm(), request.getEndHour(), request.getEndMinute()));
+
     if (selectedStartTime.isBefore(optimalSlot.getStartTime())
         || selectedEndTime.isAfter(optimalSlot.getEndTime())) {
       throw new RuntimeException(
@@ -533,36 +566,20 @@ public class GroupService {
     }
 
     // 그룹 캘린더에 시간 확정
-    GroupCalendar calendar =
+    GroupCalendar groupCalendar =
         groupCalendarRepository
             .findById(calendarId)
             .orElseThrow(() -> new RuntimeException("일정을 찾을 수 없습니다: calendarId=" + calendarId));
-    log.info("그룹 캘린더 조회 성공: {}", calendar);
+    log.info("그룹 캘린더 조회 성공: {}", groupCalendar);
 
-    calendar.setStartTime(selectedStartTime.toLocalTime());
-    calendar.setEndTime(selectedEndTime.toLocalTime());
-    calendar.setConfirmed(true);
+    groupCalendar.setStartTime(selectedStartTime.toLocalTime());
+    groupCalendar.setEndTime(selectedEndTime.toLocalTime());
+    groupCalendar.setConfirmed(true);
 
-    // AM/PM 형식으로 시간 변환
-    int startHour = selectedStartTime.getHour();
-    int startMinute = selectedStartTime.getMinute();
-    String amPmStart = (startHour >= 12) ? "PM" : "AM";
-    if (startHour > 12) startHour -= 12;
-
-    int endHour = selectedEndTime.getHour();
-    int endMinute = selectedEndTime.getMinute();
-    String amPmEnd = (endHour >= 12) ? "PM" : "AM";
-    if (endHour > 12) endHour -= 12;
-
-    // 개인 캘린더 저장
-    saveToUserCalendar(
-        calendar, loginId, amPmStart, startHour, startMinute, amPmEnd, endHour, endMinute);
-
-    groupCalendarRepository.save(calendar);
+    groupCalendarRepository.save(groupCalendar);
     log.info("그룹 캘린더 저장 성공. calendarId: {}", calendarId);
   }
 
-  // 두 시간이 겹치는지 확인하는 메서드
   private boolean isOverlapping(TimeSlot slot1, TimeSlot slot2) {
     return slot1.getStartTime().isBefore(slot2.getEndTime())
         && slot1.getEndTime().isAfter(slot2.getStartTime());
@@ -582,6 +599,9 @@ public class GroupService {
         groupCalendarRepository
             .findById(calendarId)
             .orElseThrow(() -> new RuntimeException("일정을 찾을 수 없습니다: calendarId=" + calendarId));
+
+    // 주최자 권한 확인
+    validateEventOwner(calendar, loginId);
 
     // 일정 확정
     calendar.setStartTime(selectedTimeSlot.getStartTime().toLocalTime());
@@ -641,25 +661,18 @@ public class GroupService {
     userCalService.save(requestDto, user);
   }
 
-  //  // 임의 시간 확정 로직
-  //  public void confirmCustomTime(Long calendarId, TimeSlot customTime) {
-  //    // 임의 시간 확인 및 확정
-  //    GroupConfirmedCalendar confirmedCalendar = new GroupConfirmedCalendar();
-  //    confirmedCalendar.setCalendarId(calendarId);
-  //    confirmedCalendar.setGroupId(calendarId); // groupId로 변경 필요
-  //
-  //    // 임의 시간 설정
-  //    confirmedCalendar.setConfirmedStartTime(customTime.getStartTime());
-  //    confirmedCalendar.setConfirmedEndTime(customTime.getEndTime());
-  //
-  //    groupConfirmedCalendarRepository.save(confirmedCalendar);
-  //  }
-
   // 확정일정 조회
   public GroupConfirmedCalendarDTO getConfirmedCalendar(Long groupId, Long calendarId) {
+    // 먼저 groupId로 Group 객체를 조회합니다.
+    Group group =
+        groupRepository
+            .findById(groupId)
+            .orElseThrow(() -> new RuntimeException("그룹을 찾을 수 없습니다: groupId=" + groupId));
+
+    // 조회한 Group 객체와 함께 일정 정보를 조회합니다.
     GroupCalendar calendar =
         groupCalendarRepository
-            .findByIdAndGroupIdAndConfirmed(calendarId, groupId, true) // 확정된 일정만 조회
+            .findByIdAndGroupAndConfirmed(calendarId, group, true) // 확정된 일정만 조회
             .orElseThrow(() -> new RuntimeException("확정된 일정을 찾을 수 없습니다: calendarId=" + calendarId));
 
     // GroupConfirmedCalendarDTO로 변환하여 반환
@@ -680,5 +693,12 @@ public class GroupService {
                 new GroupMemberResponseDTO(
                     member.getUser().getUsername(), member.getUser().getLoginId()))
         .collect(Collectors.toList());
+  }
+
+  // 주최자 권한 확인 메서드
+  private void validateEventOwner(GroupCalendar calendar, String loginId) {
+    if (!calendar.getCreatedBy().getLoginId().equals(loginId)) {
+      throw new RuntimeException("해당 일정의 주최자가 아닙니다.");
+    }
   }
 }

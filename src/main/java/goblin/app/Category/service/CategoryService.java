@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.Where;
@@ -11,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import goblin.app.Calendar.model.entity.UserCalRepository;
 import goblin.app.Category.model.dto.request.categoryEditRequestDto;
 import goblin.app.Category.model.dto.request.categorySaveRequestDto;
 import goblin.app.Category.model.dto.request.categoryViEditRequestDto;
@@ -22,23 +24,26 @@ import goblin.app.Category.model.entity.CategoryVisibility;
 import goblin.app.Category.model.entity.CategoryVisibilityRepository;
 import goblin.app.Common.exception.CustomException;
 import goblin.app.Common.exception.ErrorCode;
+import goblin.app.FixedSchedule.model.entity.FixedSchedule;
+import goblin.app.FixedSchedule.repository.FixedScheduleRepository;
 import goblin.app.Group.model.entity.Group;
 import goblin.app.Group.repository.GroupRepository;
 import goblin.app.User.model.entity.User;
 
 @Service
 @NoArgsConstructor
+@Slf4j
 @SQLDelete(sql = "UPDATE categories SET deleted = true WHERE id = ?")
 @Where(clause = "deleted = false")
 public class CategoryService {
 
   @Autowired private CategoryRepository categoryRepository;
-
   @Autowired private GroupRepository groupRepository;
-
   @Autowired private CategoryVisibilityRepository categoryVisibilityRepository;
+  @Autowired private FixedScheduleRepository fixedScheduleRepository;
+  @Autowired private UserCalRepository userCalRepository;
 
-  // 카테고리 추가 (색상 코드 적용)
+  // 카테고리 추가
   @Transactional
   public categoryResponseDto save(categorySaveRequestDto requestDto, User user) {
     String color = resolveColorCode(requestDto.getColorCode()); // 색상 코드에 따른 색상값 설정
@@ -55,15 +60,14 @@ public class CategoryService {
 
   // 카테고리 수정
   @Transactional
-  public categoryResponseDto edit(categoryEditRequestDto requestDto, User user) {
+  public categoryResponseDto edit(categoryEditRequestDto requestDto, User currentUser) {
     Category category =
         categoryRepository
-            .findById(requestDto.getCategoryId()) // categoryId를 사용하여 카테고리 조회
+            .findById(requestDto.getCategoryId())
             .orElseThrow(() -> new CustomException(ErrorCode.CATEGORY_NOT_FOUND));
 
-    if (!category.getUser().equals(user)) {
-      throw new CustomException(ErrorCode.UNAUTHORIZED_ACCESS);
-    }
+    // 작성자인지 체크
+    validateUser(category, currentUser);
 
     // 색상 코드를 String 값으로 변환
     String resolvedColor = requestDto.resolveColorCode();
@@ -76,24 +80,36 @@ public class CategoryService {
 
   // 카테고리 삭제 - soft (생성한 사용자만), 사용자 고정 일정도 삭제됨
   @Transactional
-  public categoryResponseDto deleteById(Long id, User user) {
+  public categoryResponseDto deleteById(Long id, User currentUser) {
+    // 카테고리 조회
     Category category =
         categoryRepository
             .findById(id)
             .orElseThrow(() -> new CustomException(ErrorCode.CATEGORY_NOT_FOUND));
-    if (!category.getUser().equals(user)) {
-      throw new CustomException(ErrorCode.UNAUTHORIZED_ACCESS);
+
+    // 작성자인지 체크
+    validateUser(category, currentUser);
+
+    // 카테고리와 연결된 고정 일정 삭제
+    List<FixedSchedule> linkedFixedSchedules = fixedScheduleRepository.findByCategory(category);
+    for (FixedSchedule schedule : linkedFixedSchedules) {
+      fixedScheduleRepository.delete(schedule);
     }
+
     // 소프트 삭제 수행
-    categoryRepository.deleteById(id);
+    category.setDeleted(true); // 카테고리 소프트 삭제
+    categoryRepository.save(category);
+
     return new categoryResponseDto(category);
   }
 
-  // 카테고리 목록 조회 (삭제되지 않은 항목들만)
-  @Transactional
-  public List<categoryResponseDto> viewAll(User user) {
-    List<Category> categories = categoryRepository.findAll();
-    return categories.stream().map(categoryResponseDto::new).collect(Collectors.toList());
+  // 작성자 검증 메서드
+  private void validateUser(Category category, User currentUser) {
+    log.info("카테고리 작성자: {}, 현재 사용자: {}", category.getUser().getLoginId(), currentUser.getLoginId());
+
+    if (!category.getUser().getLoginId().equals(currentUser.getLoginId())) {
+      throw new CustomException(ErrorCode.UNAUTHORIZED_ACCESS); // 권한 없음 예외 처리
+    }
   }
 
   // 카테고리 개별 조회

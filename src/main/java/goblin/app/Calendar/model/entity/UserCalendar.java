@@ -47,6 +47,10 @@ public class UserCalendar {
   @Convert(converter = BooleanToYNConverter.class)
   private Boolean deleted = false;
 
+  // 시간블럭 색상코드
+  @Column(name = "color", nullable = false)
+  private String color = "CCD7E5";
+
   @Builder
   public UserCalendar(
       User user, String title, String note, LocalDateTime startTime, LocalDateTime endTime) {
@@ -55,6 +59,7 @@ public class UserCalendar {
     this.note = note;
     this.startTime = startTime;
     this.endTime = endTime;
+    this.color = "CCD7E5";
   }
 
   public void update(Long id, String title, LocalDateTime startTime, LocalDateTime endTime) {

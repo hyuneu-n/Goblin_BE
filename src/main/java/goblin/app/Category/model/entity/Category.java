@@ -3,6 +3,7 @@ package goblin.app.Category.model.entity;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import jakarta.persistence.*;
 
@@ -11,6 +12,7 @@ import goblin.app.User.model.entity.User;
 
 @Entity
 @Getter
+@Setter
 @NoArgsConstructor
 @Table(name = "categories")
 public class Category {
@@ -36,10 +38,11 @@ public class Category {
   private String color;
 
   @Builder
-  public Category(String categoryName, User user, String color) {
+  public Category(String categoryName, User user, String color, boolean deleted) {
     this.categoryName = categoryName;
     this.user = user;
     this.color = color;
+    this.deleted = deleted;
   }
 
   public void update(Long id, String categoryName, String color) {

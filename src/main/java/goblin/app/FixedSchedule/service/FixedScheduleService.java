@@ -1,5 +1,6 @@
 package goblin.app.FixedSchedule.service;
 
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -11,6 +12,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import goblin.app.Category.model.entity.Category;
 import goblin.app.Category.model.entity.CategoryRepository;
+import goblin.app.Common.exception.CustomException;
+import goblin.app.Common.exception.ErrorCode;
 import goblin.app.FixedSchedule.model.dto.FixedScheduleRequestDTO;
 import goblin.app.FixedSchedule.model.dto.FixedScheduleResponseDTO;
 import goblin.app.FixedSchedule.model.entity.FixedSchedule;
@@ -27,42 +30,47 @@ public class FixedScheduleService {
   private final UserRepository userRepository;
 
   @Transactional
-  public void createFixedSchedule(FixedScheduleRequestDTO dto, String loginId) {
-    User user =
-        userRepository
-            .findByLoginId(loginId)
-            .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다: loginId=" + loginId));
-
-    // 카테고리에서 색상을 받아옴
+  public FixedScheduleResponseDTO createFixedSchedule(
+      FixedScheduleRequestDTO requestDto, User user) {
+    // 카테고리 조회
     Category category =
         categoryRepository
-            .findById(dto.getCategoryId())
-            .orElseThrow(
-                () -> new RuntimeException("카테고리를 찾을 수 없습니다: categoryId=" + dto.getCategoryId()));
+            .findById(requestDto.getCategoryId())
+            .orElseThrow(() -> new CustomException(ErrorCode.CATEGORY_NOT_FOUND));
 
-    // FixedSchedule 생성 시 dayOfWeek를 리스트로 설정
+    // 삭제된 카테고리 예외 처리
+    if (category.getDeleted()) {
+      throw new CustomException(ErrorCode.CATEGORY_DELETED);
+    }
+
+    // 고정 일정 생성
     FixedSchedule fixedSchedule =
         FixedSchedule.builder()
-            .user(user)
-            .category(category)
-            .scheduleName(dto.getScheduleName())
-            .dayOfWeek(dto.getDayOfWeek()) // 리스트로 넘김
+            .scheduleName(requestDto.getScheduleName())
             .startTime(
-                convertTo24HourFormat(dto.getAmPmStart(), dto.getStartHour(), dto.getStartMinute()))
-            .endTime(convertTo24HourFormat(dto.getAmPmEnd(), dto.getEndHour(), dto.getEndMinute()))
-            .color(category.getColor()) // 카테고리에서 색상 상속
+                convertToLocalTime(
+                    requestDto.getAmPmStart(),
+                    requestDto.getStartHour(),
+                    requestDto.getStartMinute()))
+            .endTime(
+                convertToLocalTime(
+                    requestDto.getAmPmEnd(), requestDto.getEndHour(), requestDto.getEndMinute()))
+            .dayOfWeek(requestDto.getDayOfWeek())
+            .user(user)
+            .color(category.getColor()) // 카테고리 색상 가져오기
             .build();
 
     fixedScheduleRepository.save(fixedSchedule);
+    return new FixedScheduleResponseDTO(fixedSchedule);
   }
 
-  private LocalTime convertTo24HourFormat(String amPm, int hour, int minute) {
+  private LocalDateTime convertToLocalDateTime(String amPm, int hour, int minute) {
     if ("PM".equalsIgnoreCase(amPm) && hour < 12) {
       hour += 12;
     } else if ("AM".equalsIgnoreCase(amPm) && hour == 12) {
-      hour = 0; // AM 12시는 0시로 처리
+      hour = 0;
     }
-    return LocalTime.of(hour, minute);
+    return LocalDateTime.now().withHour(hour).withMinute(minute).withSecond(0).withNano(0);
   }
 
   @Transactional(readOnly = true)

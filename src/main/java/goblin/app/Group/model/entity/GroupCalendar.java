@@ -1,5 +1,6 @@
 package goblin.app.Group.model.entity;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
@@ -25,15 +26,16 @@ public class GroupCalendar {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  @Column(nullable = false)
-  private Long groupId;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "group_id", nullable = false)
+  private Group group;
 
   @Column(nullable = false)
   private String title;
 
   @ElementCollection(fetch = FetchType.EAGER)
   @Column(nullable = false)
-  private List<LocalDateTime> selectedDates; // 선택된 날짜들
+  private List<LocalDate> selectedDates; // 선택된 날짜들
 
   @Column(nullable = false)
   private Integer time; // 예상 소요 시간

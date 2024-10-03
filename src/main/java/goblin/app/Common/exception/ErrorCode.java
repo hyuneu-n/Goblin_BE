@@ -15,6 +15,7 @@ public enum ErrorCode {
 
   // 카테고리
   CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "검증에 실패하였습니다."),
+  CATEGORY_DELETED(HttpStatus.BAD_REQUEST, "삭제된 카테고리입니다."),
 
   // 달력
   SCHEDULE_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 일정입니다."),

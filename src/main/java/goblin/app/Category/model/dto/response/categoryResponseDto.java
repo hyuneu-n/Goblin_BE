@@ -11,10 +11,12 @@ public class categoryResponseDto {
 
   private Long id;
   private String categoryName;
+  private String color;
 
   @Builder
   public categoryResponseDto(Category entity) {
     this.id = entity.getId();
     this.categoryName = entity.getCategoryName();
+    this.color = entity.getColor();
   }
 }
