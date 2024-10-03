@@ -406,6 +406,22 @@ public class GroupService {
     }
   }
 
+  // 가능 시간 수정
+  public void updateAvailableTime(
+      Long calendarId, AvailableTimeRequestDTO request, String loginId) {
+    User user =
+        userRepository
+            .findByLoginId(loginId)
+            .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다: loginId = " + loginId));
+
+    // 사용자의 기존 가능한 시간 삭제
+    availableTimeRepository.deleteByCalendarIdAndUserId(calendarId, user.getId());
+    log.info("기존 가능한 시간이 삭제되었습니다: calendarId = {}, userId = {}", calendarId, user.getId());
+
+    // 새로운 가능 시간 추가 (기존 setAvailableTime 메서드를 재사용)
+    setAvailableTime(calendarId, request, loginId);
+  }
+
   // 최적 시간 계산 및 합병로직
   private void mergeTimeSlots(TimeSlot existingSlot, TimeSlot newSlot) {
     // 겹치는 시간을 계산

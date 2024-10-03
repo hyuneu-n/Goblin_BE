@@ -309,6 +309,27 @@ public class GroupController {
     return ResponseEntity.ok("가능한 시간이 제출되었습니다.");
   }
 
+  // 가능 시간 수정
+  @Operation(summary = "가능한 시간 수정", description = "참여자가 가능한 시간을 수정")
+  @PutMapping("/{groupId}/calendar/{calendarId}/available-time")
+  public ResponseEntity<?> updateAvailableTime(
+      @PathVariable Long groupId,
+      @PathVariable Long calendarId,
+      @RequestBody AvailableTimeRequestDTO request,
+      @RequestHeader(value = "Authorization", required = true) String bearerToken) {
+
+    String loginId = extractLoginId(bearerToken);
+
+    // 그룹에 속해 있는지 확인
+    if (!groupService.isUserInGroup(groupId, loginId)) {
+      return ResponseEntity.status(HttpStatus.FORBIDDEN).body("해당 그룹의 멤버가 아닙니다.");
+    }
+
+    // 가능 시간 수정
+    groupService.updateAvailableTime(calendarId, request, loginId);
+    return ResponseEntity.ok("가능한 시간이 수정되었습니다.");
+  }
+
   @Operation(summary = "최적 시간 계산", description = "참여자들이 제출한 시간을 기반으로 가장 적합한 시간을 계산")
   @GetMapping("/calendar/{groupId}/{calendarId}/optimal-time")
   public ResponseEntity<?> calculateOptimalTime(
