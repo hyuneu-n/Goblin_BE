@@ -44,19 +44,15 @@ public class UserCalendar {
   private String note;
 
   @Column(name = "start_time")
-  @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+  @JsonFormat(pattern = "yyyy-MM-dd HH:mm")
   private LocalDateTime startTime;
 
   @Column(name = "end_time")
-  @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+  @JsonFormat(pattern = "yyyy-MM-dd HH:mm")
   private LocalDateTime endTime;
 
   @Convert(converter = BooleanToYNConverter.class)
   private Boolean deleted = false;
-
-  // 고정 일정 여부를 나타내는 필드 추가
-  @Column(name = "is_fixed", nullable = false)
-  private Boolean isFixed = false;
 
   @Builder
   public UserCalendar(
@@ -65,15 +61,13 @@ public class UserCalendar {
       String title,
       String note,
       LocalDateTime startTime,
-      LocalDateTime endTime,
-      Boolean isFixed) {
+      LocalDateTime endTime) {
     this.category = category;
     this.user = user;
     this.title = title;
     this.note = note;
     this.startTime = startTime;
     this.endTime = endTime;
-    this.isFixed = isFixed;
   }
 
   public void update(Long id, String title, LocalDateTime startTime, LocalDateTime endTime) {

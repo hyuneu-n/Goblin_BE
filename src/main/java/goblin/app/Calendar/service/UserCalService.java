@@ -42,45 +42,7 @@ public class UserCalService {
     return new uCalResponseDto(userCalendar);
   }
 
-  // 가능한 시간과 고정 일정의 중복 여부를 확인하는 메서드 추가
-  public boolean isTimeConflictingWithFixedSchedules(
-      LocalDateTime startTime, LocalDateTime endTime, User user) {
-    List<UserCalendar> fixedSchedules = userCalRepository.findFixedSchedulesByUser(user);
-    for (UserCalendar fixedSchedule : fixedSchedules) {
-      if (startTime.isBefore(fixedSchedule.getEndTime())
-          && endTime.isAfter(fixedSchedule.getStartTime())) {
-        return true; // 겹치는 시간대가 있으면 true 반환
-      }
-    }
-    return false; // 겹치는 시간대가 없으면 false 반환
-  }
-
-  // 가능한 시간 저장
-  @Transactional
-  public uCalResponseDto submitAvailableTime(uCalSaveRequestDto requestDto, User user) {
-    // 고정 일정과 중복 여부 확인
-    if (isTimeConflictingWithFixedSchedules(
-        requestDto.getStartTime(), requestDto.getEndTime(), user)) {
-      throw new CustomException(ErrorCode.TIME_CONFLICT); // 시간 충돌 예외 처리
-    }
-
-    // 카테고리가 있을 경우 처리
-    Category category = null;
-    if (requestDto.getCategoryId() != null) {
-      category =
-          categoryRepository
-              .findById(requestDto.getCategoryId())
-              .orElseThrow(() -> new CustomException(ErrorCode.CATEGORY_NOT_FOUND));
-    }
-
-    // 가능한 시간 저장 로직 진행
-    UserCalendar userCalendar = requestDto.toEntity(user, category);
-    userCalRepository.save(userCalendar);
-
-    return new uCalResponseDto(userCalendar);
-  }
-
-  // 고정 스케줄 수정
+  // 개인 일반 스케줄 수정
   @Transactional
   public uCalResponseDto edit(uCalEditRequestDto requestDto, User currentUser) {
     UserCalendar userCalendar =
@@ -100,7 +62,7 @@ public class UserCalService {
     return new uCalResponseDto(userCalendar);
   }
 
-  // 고정 스케줄 삭제 (hard delete)
+  // 개인 일반 스케줄 삭제 (hard delete)
   @Transactional
   public uCalResponseDto deleteById(Long id, User currentUser) {
     UserCalendar userCalendar =
@@ -115,7 +77,7 @@ public class UserCalService {
     return new uCalResponseDto(userCalendar);
   }
 
-  // 고정 스케줄 월별 조회 (3개까지만 조회)
+  // 개인 스케줄 월별 조회 (3개까지만 조회)
   @Transactional
   public List<uCalResponseDto> viewByMonth(int year, int month, User user) {
     int[] yearMonth = validateYearAndMonth(year, month);
@@ -125,7 +87,7 @@ public class UserCalService {
     return scheduleList.stream().limit(3).map(uCalResponseDto::new).collect(Collectors.toList());
   }
 
-  // 고정 스케줄 일별 조회
+  // 개인 스케줄 일별 조회
   @Transactional
   public List<uCalResponseDto> viewByDay(int year, int month, int day, User user) {
     int[] yearMonth = validateYearAndMonth(year, month);
@@ -160,7 +122,7 @@ public class UserCalService {
     return scheduleList.stream().map(uCalResponseDto::new).collect(Collectors.toList());
   }
 
-  // 고정 스케줄 검색 기능
+  // 개인 스케줄 검색 기능
   @Transactional
   public List<uCalResponseDto> searchSchedules(String keyword, User currentUser) {
     List<UserCalendar> scheduleList =
@@ -189,21 +151,5 @@ public class UserCalService {
   public void save(uCalSaveRequestDto requestDto, User user, Category category) {
     UserCalendar userCalendar = requestDto.toEntity(user, category);
     userCalendarRepository.save(userCalendar);
-  }
-
-  public boolean checkForTimeConflicts(LocalDateTime startTime, LocalDateTime endTime, User user) {
-    // 사용자의 고정된 일정들을 조회
-    List<UserCalendar> fixedSchedules = userCalRepository.findFixedSchedulesByUser(user);
-
-    // 고정된 일정들과 입력된 시간 범위가 겹치는지 확인
-    for (UserCalendar fixedSchedule : fixedSchedules) {
-      if (startTime.isBefore(fixedSchedule.getEndTime())
-          && endTime.isAfter(fixedSchedule.getStartTime())) {
-        return true; // 겹치는 일정이 존재하면 true 반환
-      }
-    }
-
-    // 겹치는 일정이 없으면 false 반환
-    return false;
   }
 }

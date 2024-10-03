@@ -132,9 +132,8 @@ public class UserCalController {
     }
   }
 
-  // 고정 스케줄 검색 -> 다시 짜야할 듯
-  // 현재 로직은 고정 스케쥴 검색이 아니라 개인 스케쥴 검색인 듯
-  @Operation(summary = "고정 스케줄 검색", description = "키워드를 통해 사용자의 고정 스케줄을 검색")
+  // 개인 스케줄 검색 (고정X)
+  @Operation(summary = "개인 스케줄 검색 (고정X)", description = "키워드를 통해 사용자의 개인 스케줄을 검색")
   @GetMapping("/search")
   public ResponseEntity<List<uCalResponseDto>> searchSchedules(
       @RequestParam String keyword,

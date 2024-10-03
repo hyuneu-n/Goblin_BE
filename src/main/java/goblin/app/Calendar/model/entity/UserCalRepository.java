@@ -33,7 +33,4 @@ public interface UserCalRepository extends JpaRepository<UserCalendar, Long> {
       @Param("category") Category category, @Param("user") User user);
 
   List<UserCalendar> findByTitleContainingAndUser(String title, User user);
-
-  @Query("SELECT u FROM UserCalendar u WHERE u.user = :user AND u.isFixed = true")
-  List<UserCalendar> findFixedSchedulesByUser(@Param("user") User user);
 }
