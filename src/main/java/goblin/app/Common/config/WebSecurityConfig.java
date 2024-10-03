@@ -50,7 +50,8 @@ public class WebSecurityConfig {
                         "/api/users/check-id",
                         "/api/users/login",
                         "/api/groups/**",
-                        "/api/calendar/**")
+                        "/api/calendar/**",
+                        "/api/fixed/**")
                     .permitAll()
                     .requestMatchers("/api/v1/user/*")
                     .hasRole("USER")

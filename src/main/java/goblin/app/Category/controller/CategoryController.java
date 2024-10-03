@@ -100,7 +100,7 @@ public class CategoryController {
   }
 
   @GetMapping("/visibility/view")
-  @Operation(summary = "카테고리 공개 여부 조회", description = "그룹별 고정 일정 카테고리의 공개 여부를 조회합니다.")
+  @Operation(summary = "카테고리 공개 여부 조회", description = "그룹별 고정 일정 카테고리의 공개 여부를 조회")
   public ResponseEntity<List<categoryVisibilityResponseDto>> getCategoryVisibility(
       @RequestParam Long groupId,
       @RequestHeader(value = "Authorization", required = false) String bearerToken) {
