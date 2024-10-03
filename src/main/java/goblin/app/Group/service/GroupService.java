@@ -21,6 +21,7 @@ import goblin.app.Group.model.dto.AvailableTimeSlot;
 import goblin.app.Group.model.dto.GroupCalendarRequestDTO;
 import goblin.app.Group.model.dto.GroupConfirmedCalendarDTO;
 import goblin.app.Group.model.dto.GroupMemberResponseDTO;
+import goblin.app.Group.model.dto.GroupResponseDto;
 import goblin.app.Group.model.dto.TimeRange;
 import goblin.app.Group.model.dto.TimeSlot;
 import goblin.app.Group.model.entity.AvailableTime;
@@ -230,14 +231,22 @@ public class GroupService {
   }
 
   // 그룹 조회
-  public List<Group> getUserGroups(String loginId) {
+  public List<GroupResponseDto> getUserGroups(String loginId) {
     User user =
         userRepository
             .findByLoginId(loginId)
             .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다: loginId = " + loginId));
 
     // 유저가 속한 그룹(방장, 멤버 포함) 조회 + 삭제된 그룹은 조회 안됨
-    return groupRepository.findAllByUserAsMember(user);
+    List<Group> groups = groupRepository.findAllByUserAsMember(user);
+
+    // Group 엔티티를 GroupResponseDto로 변환하여 반환
+    return groups.stream()
+        .map(
+            group ->
+                new GroupResponseDto(
+                    group.getGroupId(), group.getGroupName(), group.getCreatedBy().getUsername()))
+        .collect(Collectors.toList());
   }
 
   // 일정 삭제

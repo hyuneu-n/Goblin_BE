@@ -10,7 +10,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import goblin.app.Group.model.dto.*;
-import goblin.app.Group.model.entity.Group;
 import goblin.app.Group.model.entity.GroupCalendar;
 import goblin.app.Group.service.GroupService;
 import goblin.app.Group.service.InviteTokenService;
@@ -206,7 +205,7 @@ public class GroupController {
       @RequestHeader(value = "Authorization", required = true) String bearerToken) {
     try {
       String loginId = extractLoginId(bearerToken);
-      List<Group> groups = groupService.getUserGroups(loginId);
+      List<GroupResponseDto> groups = groupService.getUserGroups(loginId);
       return ResponseEntity.ok(groups);
     } catch (RuntimeException e) {
       log.error("그룹 조회 실패: {}", e.getMessage());

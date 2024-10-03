@@ -36,7 +36,7 @@ public class GroupConfirmedCalendar {
   @Column(nullable = false)
   private LocalDateTime confirmedEndTime;
 
-  //시간블럭 색상코드
+  // 시간블럭 색상코드
   @Column(name = "color", nullable = false)
   private String color = "A5B4DB";
 }

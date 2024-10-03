@@ -47,7 +47,7 @@ public class UserCalendar {
   @Convert(converter = BooleanToYNConverter.class)
   private Boolean deleted = false;
 
-  //시간블럭 색상코드
+  // 시간블럭 색상코드
   @Column(name = "color", nullable = false)
   private String color = "CCD7E5";
 
