@@ -1,5 +1,6 @@
 package goblin.app.Group.service;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -16,7 +17,7 @@ import org.springframework.stereotype.Service;
 
 import goblin.app.Calendar.model.dto.request.uCalSaveRequestDto;
 import goblin.app.Calendar.service.UserCalService;
-import goblin.app.Category.model.entity.CategoryRepository;
+import goblin.app.FixedSchedule.repository.FixedScheduleRepository;
 import goblin.app.Group.model.dto.AvailableTimeRequestDTO;
 import goblin.app.Group.model.dto.AvailableTimeSlot;
 import goblin.app.Group.model.dto.GroupCalendarRequestDTO;
@@ -35,7 +36,6 @@ import goblin.app.Group.model.entity.OptimalTimeSlot;
 import goblin.app.Group.repository.AvailableTimeRepository;
 import goblin.app.Group.repository.GroupCalendarParticipantRepository;
 import goblin.app.Group.repository.GroupCalendarRepository;
-import goblin.app.Group.repository.GroupConfirmedCalendarRepository;
 import goblin.app.Group.repository.GroupMemberRepository;
 import goblin.app.Group.repository.GroupRepository;
 import goblin.app.Group.repository.OptimalTimeSlotRepository;
@@ -53,10 +53,9 @@ public class GroupService {
   private final GroupCalendarParticipantRepository groupCalendarParticipantRepository;
   private final UserRepository userRepository;
   private final AvailableTimeRepository availableTimeRepository;
-  private final GroupConfirmedCalendarRepository groupConfirmedCalendarRepository;
   private final OptimalTimeSlotRepository optimalTimeSlotRepository;
-  private final CategoryRepository categoryRepository;
   private final UserCalService userCalService;
+  private final FixedScheduleRepository fixedScheduleRepository;
 
   // 그룹 생성 로직
   public void createGroup(String groupName, String loginId) {
@@ -359,6 +358,7 @@ public class GroupService {
     log.info("그룹 멤버가 삭제되었습니다: loginId = {}, groupId = {}", memberLoginId, groupId);
   }
 
+  // 가능 시간 제출
   public void setAvailableTime(Long calendarId, AvailableTimeRequestDTO request, String loginId) {
     User user =
         userRepository
@@ -366,11 +366,7 @@ public class GroupService {
             .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다: loginId = " + loginId));
 
     for (AvailableTimeSlot slot : request.getAvailableTimeSlots()) {
-      AvailableTime availableTime = new AvailableTime();
-      availableTime.setUser(user); // User 객체 설정
-      availableTime.setCalendarId(calendarId);
-
-      // AM/PM 정보를 포함하여 시간 변환
+      // AM/PM 정보를 포함한 시간 변환
       LocalTime startTime =
           convertToLocalTime(slot.getStartAmPm(), slot.getStartHour(), slot.getStartMinute());
       LocalTime endTime =
@@ -379,9 +375,31 @@ public class GroupService {
       LocalDateTime startDateTime = LocalDateTime.of(slot.getDate(), startTime);
       LocalDateTime endDateTime = LocalDateTime.of(slot.getDate(), endTime);
 
+      // 날짜의 요일을 추출
+      DayOfWeek dayOfWeek = slot.getDate().getDayOfWeek();
+
+      // 고정 일정과 겹치는지 확인 (해당 요일에 고정 일정이 있고 시간이 겹치는지 검사)
+      boolean isConflict =
+          fixedScheduleRepository
+              .existsByUserIdAndDayOfWeekContainingAndStartTimeLessThanEqualAndEndTimeGreaterThanEqual(
+                  user.getId(), dayOfWeek, endTime, startTime);
+
+      if (isConflict) {
+        log.error(
+            "고정 일정과 겹칩니다: userId = {}, calendarId = {}, startTime = {}, endTime = {}",
+            user.getId(),
+            calendarId,
+            startDateTime,
+            endDateTime);
+        throw new RuntimeException("고정 일정과 겹치는 시간이 존재합니다."); // 예외 발생
+      }
+
+      // 가능 시간 저장
+      AvailableTime availableTime = new AvailableTime();
+      availableTime.setUser(user);
+      availableTime.setCalendarId(calendarId);
       availableTime.setStartTime(startDateTime);
       availableTime.setEndTime(endDateTime);
-
       availableTimeRepository.save(availableTime);
       log.info("참여자의 가능 시간 등록 완료: calendarId = {}, userId = {}", calendarId, user.getId());
     }
@@ -409,57 +427,50 @@ public class GroupService {
 
   // 최적 시간 계산 및 후보 저장
   public List<TimeSlot> calculateOptimalTimesAndSave(Long calendarId) {
-    log.info("최적 시간 계산 및 저장 시작. calendarId: {}", calendarId);
-
     List<AvailableTime> availableTimes = availableTimeRepository.findByCalendarId(calendarId);
-    log.info("조회된 AvailableTime 개수: {}", availableTimes.size());
-
     List<TimeSlot> timeSlots = new ArrayList<>();
 
     for (AvailableTime time : availableTimes) {
       TimeSlot newSlot =
           TimeSlot.builder()
-              .id(time.getId())
               .startTime(time.getStartTime())
               .endTime(time.getEndTime())
               .participants(new ArrayList<>())
               .build();
       newSlot.getParticipants().add(time.getUser().getLoginId());
 
-      log.info("새로운 시간 슬롯 생성: {}", newSlot);
-
-      // 기존 슬롯과 병합
       boolean merged = false;
       for (TimeSlot existingSlot : timeSlots) {
         if (isOverlapping(existingSlot, newSlot)) {
-          mergeTimeSlots(existingSlot, newSlot); // 병합 로직
+          mergeTimeSlots(existingSlot, newSlot); // 겹치는 경우 병합
           merged = true;
-          log.info("슬롯 병합 완료: {}", existingSlot);
           break;
         }
       }
 
       if (!merged) {
         timeSlots.add(newSlot);
-        log.info("새로운 슬롯 추가: {}", newSlot);
       }
     }
 
-    log.info("최적 시간 슬롯 개수: {}", timeSlots.size());
+    // 두 명 이상의 참가자가 겹치는 시간대만 반환
+    List<TimeSlot> validSlots =
+        timeSlots.stream()
+            .filter(slot -> slot.getParticipants().size() >= 2)
+            .collect(Collectors.toList());
 
-    // 후보 시간 저장
-    for (TimeSlot slot : timeSlots) {
+    // 최적 시간대 저장
+    for (TimeSlot slot : validSlots) {
       OptimalTimeSlot optimalSlot = new OptimalTimeSlot();
       optimalSlot.setCalendarId(calendarId);
       optimalSlot.setStartTime(slot.getStartTime());
       optimalSlot.setEndTime(slot.getEndTime());
       optimalSlot.setParticipants(slot.getParticipants());
-      optimalTimeSlotRepository.save(optimalSlot);
-
-      log.info("OptimalTimeSlot 저장 완료: {}", optimalSlot);
+      OptimalTimeSlot savedSlot = optimalTimeSlotRepository.save(optimalSlot);
+      slot.setId(savedSlot.getId()); // 저장된 ID 설정
     }
 
-    return timeSlots;
+    return validSlots;
   }
 
   // 선택한 시간 범위 내에서 시간 확정
