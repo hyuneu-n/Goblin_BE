@@ -5,20 +5,18 @@ import java.time.LocalDateTime;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import jakarta.persistence.*;
 
-import org.hibernate.annotations.OnDelete;
-import org.hibernate.annotations.OnDeleteAction;
-
 import com.fasterxml.jackson.annotation.JsonFormat;
 
-import goblin.app.Category.model.entity.Category;
 import goblin.app.Common.config.BooleanToYNConverter;
 import goblin.app.User.model.entity.User;
 
 @Entity
 @Getter
+@Setter
 @NoArgsConstructor
 @Table(name = "user_calendar")
 public class UserCalendar {
@@ -30,11 +28,6 @@ public class UserCalendar {
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "user_id")
   private User user;
-
-  @JoinColumn(name = "category_id", nullable = true) // Category가 없을 때 null로 허용
-  @ManyToOne(fetch = FetchType.LAZY)
-  @OnDelete(action = OnDeleteAction.CASCADE)
-  private Category category;
 
   @Column(nullable = false)
   private String title;
@@ -56,13 +49,7 @@ public class UserCalendar {
 
   @Builder
   public UserCalendar(
-      Category category,
-      User user,
-      String title,
-      String note,
-      LocalDateTime startTime,
-      LocalDateTime endTime) {
-    this.category = category;
+      User user, String title, String note, LocalDateTime startTime, LocalDateTime endTime) {
     this.user = user;
     this.title = title;
     this.note = note;

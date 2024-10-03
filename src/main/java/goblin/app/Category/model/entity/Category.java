@@ -1,15 +1,11 @@
 package goblin.app.Category.model.entity;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import jakarta.persistence.*;
 
-import goblin.app.Calendar.model.entity.UserCalendar;
 import goblin.app.Common.config.BooleanToYNConverter;
 import goblin.app.User.model.entity.User;
 
@@ -26,9 +22,6 @@ public class Category {
 
   @Column(name = "category_name", nullable = false)
   private String categoryName;
-
-  @OneToMany(mappedBy = "category", cascade = CascadeType.ALL, orphanRemoval = true)
-  private List<UserCalendar> userCalendars = new ArrayList<>();
 
   @ManyToOne
   @JoinColumn(name = "user_id")
