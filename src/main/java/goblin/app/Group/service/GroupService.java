@@ -20,6 +20,7 @@ import goblin.app.Calendar.service.UserCalService;
 import goblin.app.FixedSchedule.repository.FixedScheduleRepository;
 import goblin.app.Group.model.dto.AvailableTimeRequestDTO;
 import goblin.app.Group.model.dto.AvailableTimeSlot;
+import goblin.app.Group.model.dto.ConfirmTimeRangeRequest;
 import goblin.app.Group.model.dto.GroupCalendarRequestDTO;
 import goblin.app.Group.model.dto.GroupCalendarResponseDTO;
 import goblin.app.Group.model.dto.GroupConfirmedCalendarDTO;
@@ -407,79 +408,100 @@ public class GroupService {
 
   // 최적 시간 계산 및 합병로직
   private void mergeTimeSlots(TimeSlot existingSlot, TimeSlot newSlot) {
-    existingSlot.setStartTime(
-        existingSlot.getStartTime().isBefore(newSlot.getStartTime())
+    // 겹치는 시간을 계산
+    LocalDateTime maxStartTime =
+        existingSlot.getStartTime().isAfter(newSlot.getStartTime())
             ? existingSlot.getStartTime()
-            : newSlot.getStartTime());
+            : newSlot.getStartTime();
 
-    existingSlot.setEndTime(
-        existingSlot.getEndTime().isAfter(newSlot.getEndTime())
+    LocalDateTime minEndTime =
+        existingSlot.getEndTime().isBefore(newSlot.getEndTime())
             ? existingSlot.getEndTime()
-            : newSlot.getEndTime());
+            : newSlot.getEndTime();
 
-    // 새로운 참가자들을 기존 슬롯에 추가
-    for (String participant : newSlot.getParticipants()) {
-      if (!existingSlot.getParticipants().contains(participant)) {
-        existingSlot.getParticipants().add(participant);
+    // 겹치는 시간이 있으면 병합
+    if (maxStartTime.isBefore(minEndTime)) {
+      existingSlot.setStartTime(maxStartTime);
+      existingSlot.setEndTime(minEndTime);
+
+      // 새로운 참가자 추가
+      for (String participant : newSlot.getParticipants()) {
+        if (!existingSlot.getParticipants().contains(participant)) {
+          existingSlot.getParticipants().add(participant);
+        }
       }
     }
   }
 
-  // 최적 시간 계산 및 후보 저장
   public List<TimeSlot> calculateOptimalTimesAndSave(Long calendarId) {
+    log.info("최적 시간 계산 및 저장 시작. calendarId: {}", calendarId);
+
+    // 1. 모든 참가자의 가능한 시간을 가져옴
     List<AvailableTime> availableTimes = availableTimeRepository.findByCalendarId(calendarId);
+    log.info("조회된 AvailableTime 개수: {}", availableTimes.size());
+
+    // 2. 시간대 병합을 위한 리스트
     List<TimeSlot> timeSlots = new ArrayList<>();
 
+    // 3. 참가자의 가능한 시간대를 TimeSlot으로 변환하고 병합
     for (AvailableTime time : availableTimes) {
       TimeSlot newSlot =
           TimeSlot.builder()
+              .id(time.getId()) // 실제 ID를 저장
               .startTime(time.getStartTime())
               .endTime(time.getEndTime())
               .participants(new ArrayList<>())
               .build();
-      newSlot.getParticipants().add(time.getUser().getLoginId());
 
+      // 참가자를 추가 (loginId 대신 username을 사용)
+      newSlot.getParticipants().add(time.getUser().getUsername());
+
+      log.info("새로운 시간 슬롯 생성: {}", newSlot);
+
+      // 4. 기존 슬롯과 비교하여 병합할 수 있으면 병합, 아니면 새로운 슬롯으로 추가
       boolean merged = false;
       for (TimeSlot existingSlot : timeSlots) {
         if (isOverlapping(existingSlot, newSlot)) {
-          mergeTimeSlots(existingSlot, newSlot); // 겹치는 경우 병합
+          mergeTimeSlots(existingSlot, newSlot); // 겹치는 시간 병합
           merged = true;
+          log.info("슬롯 병합 완료: {}", existingSlot);
           break;
         }
       }
 
       if (!merged) {
         timeSlots.add(newSlot);
+        log.info("새로운 슬롯 추가: {}", newSlot);
       }
     }
 
-    // 두 명 이상의 참가자가 겹치는 시간대만 반환
-    List<TimeSlot> validSlots =
+    // 5. 두 명 이상의 참가자가 겹치는 시간대만 필터링
+    List<TimeSlot> filteredTimeSlots =
         timeSlots.stream()
-            .filter(slot -> slot.getParticipants().size() >= 2)
+            .filter(slot -> slot.getParticipants().size() >= 2) // 두 명 이상인 시간대만 필터링
             .collect(Collectors.toList());
 
-    // 최적 시간대 저장
-    for (TimeSlot slot : validSlots) {
+    log.info("최적 시간 슬롯 개수 (두 명 이상 겹침): {}", filteredTimeSlots.size());
+
+    // 6. 병합된 시간대 저장
+    for (TimeSlot slot : filteredTimeSlots) {
       OptimalTimeSlot optimalSlot = new OptimalTimeSlot();
       optimalSlot.setCalendarId(calendarId);
       optimalSlot.setStartTime(slot.getStartTime());
       optimalSlot.setEndTime(slot.getEndTime());
-      optimalSlot.setParticipants(slot.getParticipants());
-      OptimalTimeSlot savedSlot = optimalTimeSlotRepository.save(optimalSlot);
-      slot.setId(savedSlot.getId()); // 저장된 ID 설정
+      optimalSlot.setParticipants(slot.getParticipants()); // username 반환
+      optimalTimeSlotRepository.save(optimalSlot); // 저장 후 ID값 설정
+
+      slot.setId(optimalSlot.getId()); // 저장된 PK 값 가져오기
+      log.info("OptimalTimeSlot 저장 완료: {}", optimalSlot);
     }
 
-    return validSlots;
+    return filteredTimeSlots;
   }
 
-  // 선택한 시간 범위 내에서 시간 확정
+  // 범위 내에서 사용자 지정 시간 확정
   public void confirmCustomTimeInRange(
-      Long calendarId,
-      Long optimalTimeSlotId,
-      LocalDateTime selectedStartTime,
-      LocalDateTime selectedEndTime,
-      String loginId) {
+      Long calendarId, Long optimalTimeSlotId, ConfirmTimeRangeRequest request, String loginId) {
 
     // null 체크 추가
     if (optimalTimeSlotId == null) {
@@ -493,25 +515,31 @@ public class GroupService {
     }
 
     log.info(
-        "confirmCustomTimeInRange 호출됨. calendarId: {}, optimalTimeSlotId: {}, selectedStartTime: {}, selectedEndTime: {}, loginId: {}",
+        "confirmCustomTimeInRange 호출됨. calendarId: {}, optimalTimeSlotId: {}, request: {}, loginId: {}",
         calendarId,
         optimalTimeSlotId,
-        selectedStartTime,
-        selectedEndTime,
+        request,
         loginId);
 
     // 최적 시간 후보에서 선택된 슬롯 확인
     OptimalTimeSlot optimalSlot =
         optimalTimeSlotRepository
             .findById(optimalTimeSlotId)
-            .orElseThrow(
-                () ->
-                    new RuntimeException(
-                        "선택한 시간 슬롯을 찾을 수 없습니다. optimalTimeSlotId: " + optimalTimeSlotId));
+            .orElseThrow(() -> new RuntimeException("선택한 시간 슬롯을 찾을 수 없습니다."));
 
     log.info("선택한 OptimalTimeSlot 조회 성공: {}", optimalSlot);
 
-    // 선택한 시간 범위가 유효한지 확인
+    // 선택한 시간 범위가 유효한지 확인 (startTime, endTime 변환 필요)
+    LocalDateTime selectedStartTime =
+        LocalDateTime.of(
+            request.getDate(),
+            convertToLocalTime(
+                request.getStartAmPm(), request.getStartHour(), request.getStartMinute()));
+    LocalDateTime selectedEndTime =
+        LocalDateTime.of(
+            request.getDate(),
+            convertToLocalTime(request.getEndAmPm(), request.getEndHour(), request.getEndMinute()));
+
     if (selectedStartTime.isBefore(optimalSlot.getStartTime())
         || selectedEndTime.isAfter(optimalSlot.getEndTime())) {
       throw new RuntimeException(
@@ -522,36 +550,20 @@ public class GroupService {
     }
 
     // 그룹 캘린더에 시간 확정
-    GroupCalendar calendar =
+    GroupCalendar groupCalendar =
         groupCalendarRepository
             .findById(calendarId)
             .orElseThrow(() -> new RuntimeException("일정을 찾을 수 없습니다: calendarId=" + calendarId));
-    log.info("그룹 캘린더 조회 성공: {}", calendar);
+    log.info("그룹 캘린더 조회 성공: {}", groupCalendar);
 
-    calendar.setStartTime(selectedStartTime.toLocalTime());
-    calendar.setEndTime(selectedEndTime.toLocalTime());
-    calendar.setConfirmed(true);
+    groupCalendar.setStartTime(selectedStartTime.toLocalTime());
+    groupCalendar.setEndTime(selectedEndTime.toLocalTime());
+    groupCalendar.setConfirmed(true);
 
-    // AM/PM 형식으로 시간 변환
-    int startHour = selectedStartTime.getHour();
-    int startMinute = selectedStartTime.getMinute();
-    String amPmStart = (startHour >= 12) ? "PM" : "AM";
-    if (startHour > 12) startHour -= 12;
-
-    int endHour = selectedEndTime.getHour();
-    int endMinute = selectedEndTime.getMinute();
-    String amPmEnd = (endHour >= 12) ? "PM" : "AM";
-    if (endHour > 12) endHour -= 12;
-
-    // 개인 캘린더 저장
-    saveToUserCalendar(
-        calendar, loginId, amPmStart, startHour, startMinute, amPmEnd, endHour, endMinute);
-
-    groupCalendarRepository.save(calendar);
+    groupCalendarRepository.save(groupCalendar);
     log.info("그룹 캘린더 저장 성공. calendarId: {}", calendarId);
   }
 
-  // 두 시간이 겹치는지 확인하는 메서드
   private boolean isOverlapping(TimeSlot slot1, TimeSlot slot2) {
     return slot1.getStartTime().isBefore(slot2.getEndTime())
         && slot1.getEndTime().isAfter(slot2.getStartTime());

@@ -182,13 +182,13 @@ public class GroupController {
     }
 
     // 범위 내에서 사용자 지정 시간 확정
-    groupService.confirmCustomTimeInRange(
-        calendarId,
-        request.getOptimalTimeSlotId(),
-        request.getStartTime(),
-        request.getEndTime(),
-        loginId);
-    return ResponseEntity.ok("일정이 확정되었습니다.");
+    try {
+      groupService.confirmCustomTimeInRange(
+          calendarId, request.getOptimalTimeSlotId(), request, loginId);
+      return ResponseEntity.ok("일정이 확정되었습니다.");
+    } catch (RuntimeException e) {
+      return ResponseEntity.badRequest().body(e.getMessage());
+    }
   }
 
   // 그룹 조회
