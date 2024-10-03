@@ -14,7 +14,7 @@ import jakarta.persistence.Table;
 @Table(name = "group_calendar_participant")
 @Getter
 @Setter
-public class GroupCalendarParticipant {
+public class GroupCalendarParticipant { // 그룹에서 일정 만들 때 해당 일정 참여자 엔티티 (그룹 멤버 아님!)
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
