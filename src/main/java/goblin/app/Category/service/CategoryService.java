@@ -38,23 +38,39 @@ public class CategoryService {
 
   @Autowired private CategoryVisibilityRepository categoryVisibilityRepository;
 
-  // 카테고리 추가
+  // 카테고리 추가 (색상 코드 적용)
   @Transactional
   public categoryResponseDto save(categorySaveRequestDto requestDto, User user) {
-    Category category = categoryRepository.save(requestDto.toEntity(user));
+    String color = resolveColorCode(requestDto.getColorCode()); // 색상 코드에 따른 색상값 설정
+    Category category =
+        Category.builder()
+            .categoryName(requestDto.getCategoryName())
+            .user(user)
+            .color(color) // 색상값 저장
+            .build();
+
+    categoryRepository.save(category);
     return new categoryResponseDto(category);
   }
 
   // 카테고리 수정
   @Transactional
-  public categoryResponseDto edit(categoryEditRequestDto requestDo, User user) {
+  public categoryResponseDto edit(categoryEditRequestDto requestDto, User user) {
     Category category =
         categoryRepository
-            .findById(requestDo.getCategoryId())
+            .findById(requestDto.getCategoryId()) // categoryId를 사용하여 카테고리 조회
             .orElseThrow(() -> new CustomException(ErrorCode.CATEGORY_NOT_FOUND));
+
     if (!category.getUser().equals(user)) {
       throw new CustomException(ErrorCode.UNAUTHORIZED_ACCESS);
     }
+
+    // 색상 코드를 String 값으로 변환
+    String resolvedColor = requestDto.resolveColorCode();
+
+    // 카테고리 업데이트
+    category.update(requestDto.getCategoryId(), requestDto.getCategoryName(), resolvedColor);
+
     return new categoryResponseDto(category);
   }
 
@@ -142,5 +158,23 @@ public class CategoryService {
             .collect(Collectors.toList());
 
     return responseDtos;
+  }
+
+  // 색상 코드 번호에 따라 미리 지정된 색상 값을 반환하는 메서드
+  private String resolveColorCode(int colorCode) {
+    switch (colorCode) {
+      case 1:
+        return "F3DAD8";
+      case 2:
+        return "F1DAED";
+      case 3:
+        return "F2EDD9";
+      case 4:
+        return "E6E8E3";
+      case 5:
+        return "B1B0B5";
+      default:
+        throw new IllegalArgumentException("유효하지 않은 색상 코드입니다: " + colorCode);
+    }
   }
 }
