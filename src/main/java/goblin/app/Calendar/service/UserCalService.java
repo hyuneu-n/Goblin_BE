@@ -131,7 +131,7 @@ public class UserCalService {
   @Transactional
   public List<uCalResponseDto> searchSchedules(String keyword, User currentUser) {
     List<UserCalendar> scheduleList =
-        userCalRepository.findByTitleContainingAndUser(keyword, currentUser);
+        userCalRepository.findByTitleContainingAndUserAndDeletedFalse(keyword, currentUser);
     return scheduleList.stream().map(uCalResponseDto::new).collect(Collectors.toList());
   }
 
