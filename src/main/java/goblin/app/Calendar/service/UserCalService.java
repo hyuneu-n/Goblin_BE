@@ -15,8 +15,6 @@ import goblin.app.Calendar.model.dto.request.uCalSaveRequestDto;
 import goblin.app.Calendar.model.dto.response.uCalResponseDto;
 import goblin.app.Calendar.model.entity.UserCalRepository;
 import goblin.app.Calendar.model.entity.UserCalendar;
-import goblin.app.Calendar.repository.UserCalendarRepository;
-import goblin.app.Category.model.entity.CategoryRepository;
 import goblin.app.Common.exception.CustomException;
 import goblin.app.Common.exception.ErrorCode;
 import goblin.app.User.model.entity.User;
@@ -27,8 +25,6 @@ import goblin.app.User.model.entity.User;
 public class UserCalService {
 
   private final UserCalRepository userCalRepository;
-  private final CategoryRepository categoryRepository;
-  private final UserCalendarRepository userCalendarRepository;
 
   // 일반 스케쥴 등록
   @Transactional
