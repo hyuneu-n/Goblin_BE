@@ -12,7 +12,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import goblin.app.Calendar.model.dto.request.uCalEditRequestDto;
 import goblin.app.Calendar.model.dto.request.uCalSaveRequestDto;
 import goblin.app.Calendar.model.dto.response.uCalResponseDto;
 import goblin.app.Calendar.service.UserCalService;
@@ -53,11 +52,13 @@ public class UserCalController {
   @Operation(summary = "유저 캘린더 수정", description = "기존 캘린더 일정 수정")
   @PutMapping("/edit")
   public ResponseEntity<uCalResponseDto> edit(
-      @RequestBody @Valid uCalEditRequestDto requestDto,
-      @RequestHeader(value = "Authorization", required = false) String bearerToken) {
+      @RequestBody @Valid uCalSaveRequestDto requestDto, // @Valid 적용
+      @RequestHeader(value = "Authorization", required = false) String bearerToken,
+      @RequestHeader(value = "Schedule-Id") Long scheduleId) { // 헤더에서 ID 받기
     try {
       User user = getUserFromToken(bearerToken);
-      uCalResponseDto responseDto = userCalService.edit(requestDto, user);
+      uCalResponseDto responseDto =
+          userCalService.edit(scheduleId, requestDto, user); // scheduleId 전달
       return ResponseEntity.status(HttpStatus.OK).body(responseDto);
     } catch (RuntimeException e) {
       log.error("유저 캘린더 수정 실패: {}", e.getMessage());
@@ -112,22 +113,6 @@ public class UserCalController {
       return ResponseEntity.status(HttpStatus.OK).body(calList);
     } catch (RuntimeException e) {
       log.error("유저 캘린더 조회 실패: {}", e.getMessage());
-      return ResponseEntity.badRequest().body(null);
-    }
-  }
-
-  // 카테고리별 스케줄 조회
-  @Operation(summary = "카테고리별 스케줄 조회", description = "카테고리별로 사용자의 일정을 조회")
-  @GetMapping("/category/{categoryId}")
-  public ResponseEntity<List<uCalResponseDto>> viewByCategory(
-      @PathVariable Long categoryId,
-      @RequestHeader(value = "Authorization", required = false) String bearerToken) {
-    try {
-      User user = getUserFromToken(bearerToken);
-      List<uCalResponseDto> response = userCalService.viewByCategory(categoryId, user);
-      return ResponseEntity.ok(response);
-    } catch (RuntimeException e) {
-      log.error("카테고리별 스케줄 조회 실패: {}", e.getMessage());
       return ResponseEntity.badRequest().body(null);
     }
   }

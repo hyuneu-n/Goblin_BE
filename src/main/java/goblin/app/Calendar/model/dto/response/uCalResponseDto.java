@@ -12,8 +12,6 @@ import goblin.app.Calendar.model.entity.UserCalendar;
 public class uCalResponseDto {
   Long id;
   String title;
-  String categoryName;
-
   String note;
 
   LocalDateTime startTime;
@@ -21,7 +19,6 @@ public class uCalResponseDto {
 
   @Builder
   public uCalResponseDto(UserCalendar entity) {
-    this.categoryName = entity.getCategory().getCategoryName();
     this.title = entity.getTitle();
     this.id = entity.getId();
     this.note = entity.getNote();

@@ -15,7 +15,6 @@ import org.springframework.stereotype.Service;
 
 import goblin.app.Calendar.model.dto.request.uCalSaveRequestDto;
 import goblin.app.Calendar.service.UserCalService;
-import goblin.app.Category.model.entity.Category;
 import goblin.app.Category.model.entity.CategoryRepository;
 import goblin.app.Group.model.dto.AvailableTimeRequestDTO;
 import goblin.app.Group.model.dto.AvailableTimeSlot;
@@ -544,8 +543,20 @@ public class GroupService {
     calendar.setEndTime(selectedEndTime.toLocalTime());
     calendar.setConfirmed(true);
 
+    // AM/PM 형식으로 시간 변환
+    int startHour = selectedStartTime.getHour();
+    int startMinute = selectedStartTime.getMinute();
+    String amPmStart = (startHour >= 12) ? "PM" : "AM";
+    if (startHour > 12) startHour -= 12;
+
+    int endHour = selectedEndTime.getHour();
+    int endMinute = selectedEndTime.getMinute();
+    String amPmEnd = (endHour >= 12) ? "PM" : "AM";
+    if (endHour > 12) endHour -= 12;
+
     // 개인 캘린더 저장
-    saveToUserCalendar(calendar, loginId, selectedStartTime, selectedEndTime);
+    saveToUserCalendar(
+        calendar, loginId, amPmStart, startHour, startMinute, amPmEnd, endHour, endMinute);
 
     groupCalendarRepository.save(calendar);
     log.info("그룹 캘린더 저장 성공. calendarId: {}", calendarId);
@@ -577,48 +588,57 @@ public class GroupService {
     calendar.setEndTime(selectedTimeSlot.getEndTime().toLocalTime());
     calendar.setConfirmed(true);
 
-    // 개인 캘린더에 일정 저장 (TimeSlot에서 LocalDateTime을 추출)
+    // TimeSlot에서 LocalDateTime을 AM/PM 형식으로 변환
+    int startHour = selectedTimeSlot.getStartTime().getHour();
+    int startMinute = selectedTimeSlot.getStartTime().getMinute();
+    String amPmStart = (startHour >= 12) ? "PM" : "AM";
+    if (startHour > 12) startHour -= 12;
+
+    int endHour = selectedTimeSlot.getEndTime().getHour();
+    int endMinute = selectedTimeSlot.getEndTime().getMinute();
+    String amPmEnd = (endHour >= 12) ? "PM" : "AM";
+    if (endHour > 12) endHour -= 12;
+
+    // 개인 캘린더에 일정 저장
     saveToUserCalendar(
-        calendar, loginId, selectedTimeSlot.getStartTime(), selectedTimeSlot.getEndTime());
+        calendar, loginId, amPmStart, startHour, startMinute, amPmEnd, endHour, endMinute);
 
     groupCalendarRepository.save(calendar);
     log.info("일정이 확정되었습니다: calendarId = {}", calendarId);
   }
 
-  private Long findAppropriateCategoryId() {
-    // 카테고리 ID를 결정하는 로직
-    return 1L; // 예시: 기본 카테고리 ID를 반환
-  }
-
-  // 개인 캘린더에 저장하는 메서드
   private void saveToUserCalendar(
-      GroupCalendar calendar, String loginId, LocalDateTime startTime, LocalDateTime endTime) {
+      GroupCalendar calendar,
+      String loginId,
+      String amPmStart,
+      int startHour,
+      int startMinute,
+      String amPmEnd,
+      int endHour,
+      int endMinute) {
 
     User user =
         userRepository
             .findByLoginId(loginId)
             .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다: loginId=" + loginId));
 
-    Long categoryId = findAppropriateCategoryId(); // categoryId 결정 로직
-
-    Category category = null;
-    if (categoryId != null) {
-      category = categoryRepository.findById(categoryId).orElse(null); // 카테고리가 없을 경우 null 처리
-    }
-
+    // DTO 생성 시 AM/PM 값과 시간을 전달
     uCalSaveRequestDto requestDto =
         uCalSaveRequestDto
             .builder()
-            .categoryId(categoryId)
             .title(calendar.getTitle())
             .note(calendar.getNote())
-            .startTime(startTime)
-            .endTime(endTime)
+            .amPmStart(amPmStart)
+            .startHour(startHour)
+            .startMinute(startMinute)
+            .amPmEnd(amPmEnd)
+            .endHour(endHour)
+            .endMinute(endMinute)
             .build();
 
     log.info("uCalSaveRequestDto 생성: {}", requestDto);
 
-    userCalService.save(requestDto, user, category); // category가 null일 수 있음
+    userCalService.save(requestDto, user);
   }
 
   //  // 임의 시간 확정 로직

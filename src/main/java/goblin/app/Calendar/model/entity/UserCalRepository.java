@@ -6,7 +6,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import goblin.app.Category.model.entity.Category;
 import goblin.app.User.model.entity.User;
 
 public interface UserCalRepository extends JpaRepository<UserCalendar, Long> {
@@ -27,10 +26,6 @@ public interface UserCalRepository extends JpaRepository<UserCalendar, Long> {
       @Param("month") int month,
       @Param("day") int day,
       @Param("user") User user);
-
-  @Query("SELECT u FROM UserCalendar u WHERE u.category = :category AND u.user = :user")
-  List<UserCalendar> findByCategoryAndUser(
-      @Param("category") Category category, @Param("user") User user);
 
   List<UserCalendar> findByTitleContainingAndUser(String title, User user);
 }
