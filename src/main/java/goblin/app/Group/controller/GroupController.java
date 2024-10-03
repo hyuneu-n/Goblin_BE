@@ -78,6 +78,7 @@ public class GroupController {
   }
 
   // 일정 삭제 (Soft Delete)
+  @Operation(summary = "그룹 일정 삭제", description = "그룹 일정을 삭제 (주최자만 가능)")
   @DeleteMapping("/{groupId}/calendar/{calendarId}")
   public ResponseEntity<?> deleteCalendarEvent(
       @PathVariable Long groupId,
