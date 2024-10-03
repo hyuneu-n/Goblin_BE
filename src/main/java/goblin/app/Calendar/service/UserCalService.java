@@ -1,6 +1,7 @@
 package goblin.app.Calendar.service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -14,6 +15,7 @@ import goblin.app.Calendar.model.dto.request.uCalSaveRequestDto;
 import goblin.app.Calendar.model.dto.response.uCalResponseDto;
 import goblin.app.Calendar.model.entity.UserCalRepository;
 import goblin.app.Calendar.model.entity.UserCalendar;
+import goblin.app.Calendar.repository.UserCalendarRepository;
 import goblin.app.Category.model.entity.Category;
 import goblin.app.Category.model.entity.CategoryRepository;
 import goblin.app.Common.exception.CustomException;
@@ -26,8 +28,9 @@ public class UserCalService {
 
   private final UserCalRepository userCalRepository;
   private final CategoryRepository categoryRepository;
+  private final UserCalendarRepository userCalendarRepository;
 
-  // 고정 스케줄 등록
+  // 일반 스케쥴 등록
   @Transactional
   public uCalResponseDto save(uCalSaveRequestDto requestDto, User currentUser) {
     Category category =
@@ -39,7 +42,7 @@ public class UserCalService {
     return new uCalResponseDto(userCalendar);
   }
 
-  // 고정 스케줄 수정
+  // 개인 일반 스케줄 수정
   @Transactional
   public uCalResponseDto edit(uCalEditRequestDto requestDto, User currentUser) {
     UserCalendar userCalendar =
@@ -59,7 +62,7 @@ public class UserCalService {
     return new uCalResponseDto(userCalendar);
   }
 
-  // 고정 스케줄 삭제 (hard delete)
+  // 개인 일반 스케줄 삭제 (hard delete)
   @Transactional
   public uCalResponseDto deleteById(Long id, User currentUser) {
     UserCalendar userCalendar =
@@ -74,7 +77,7 @@ public class UserCalService {
     return new uCalResponseDto(userCalendar);
   }
 
-  // 고정 스케줄 월별 조회 (3개까지만 조회)
+  // 개인 스케줄 월별 조회 (3개까지만 조회)
   @Transactional
   public List<uCalResponseDto> viewByMonth(int year, int month, User user) {
     int[] yearMonth = validateYearAndMonth(year, month);
@@ -84,7 +87,7 @@ public class UserCalService {
     return scheduleList.stream().limit(3).map(uCalResponseDto::new).collect(Collectors.toList());
   }
 
-  // 고정 스케줄 일별 조회
+  // 개인 스케줄 일별 조회
   @Transactional
   public List<uCalResponseDto> viewByDay(int year, int month, int day, User user) {
     int[] yearMonth = validateYearAndMonth(year, month);
@@ -119,7 +122,7 @@ public class UserCalService {
     return scheduleList.stream().map(uCalResponseDto::new).collect(Collectors.toList());
   }
 
-  // 고정 스케줄 검색 기능
+  // 개인 스케줄 검색 기능
   @Transactional
   public List<uCalResponseDto> searchSchedules(String keyword, User currentUser) {
     List<UserCalendar> scheduleList =
@@ -143,5 +146,10 @@ public class UserCalService {
     month = (month <= 0 || month > 12) ? currentMonth : month;
 
     return new int[] {year, month};
+  }
+
+  public void save(uCalSaveRequestDto requestDto, User user, Category category) {
+    UserCalendar userCalendar = requestDto.toEntity(user, category);
+    userCalendarRepository.save(userCalendar);
   }
 }
