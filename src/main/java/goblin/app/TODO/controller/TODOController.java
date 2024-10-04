@@ -19,7 +19,7 @@ import io.jsonwebtoken.Claims;
 import io.swagger.v3.oas.annotations.Operation;
 
 @RestController
-@RequestMapping("/groups/{groupId}/todos")
+@RequestMapping("/api/groups/{groupId}/todos")
 @RequiredArgsConstructor
 public class TODOController {
 

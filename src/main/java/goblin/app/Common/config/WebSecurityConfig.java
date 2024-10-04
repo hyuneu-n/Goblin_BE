@@ -51,7 +51,8 @@ public class WebSecurityConfig {
                         "/api/users/login",
                         "/api/groups/**",
                         "/api/calendar/**",
-                        "/api/fixed/**")
+                        "/api/fixed/**",
+                        "/api/groups/{groupId}/todos/**")
                     .permitAll()
                     .requestMatchers("/api/v1/user/*")
                     .hasRole("USER")
