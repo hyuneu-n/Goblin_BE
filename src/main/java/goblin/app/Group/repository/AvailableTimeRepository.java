@@ -12,5 +12,5 @@ public interface AvailableTimeRepository extends JpaRepository<AvailableTime, Lo
   List<AvailableTime> findByCalendarId(Long calendarId);
 
   // 사용자와 캘린더 ID로 가능한 시간 삭제
-  void deleteByCalendarIdAndUserId(Long calendarId, Long userId);
+  void deleteByCalendarIdAndUserId(Long calendarId, Long loginId);
 }
