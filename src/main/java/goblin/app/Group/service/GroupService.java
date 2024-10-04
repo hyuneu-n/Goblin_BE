@@ -407,6 +407,7 @@ public class GroupService {
   }
 
   // 가능 시간 수정
+  @Transactional
   public void updateAvailableTime(
       Long calendarId, AvailableTimeRequestDTO request, String loginId) {
     User user =
@@ -414,12 +415,48 @@ public class GroupService {
             .findByLoginId(loginId)
             .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다: loginId = " + loginId));
 
-    // 사용자의 기존 가능한 시간 삭제
+    // 기존 가능 시간 삭제
     availableTimeRepository.deleteByCalendarIdAndUserId(calendarId, user.getId());
-    log.info("기존 가능한 시간이 삭제되었습니다: calendarId = {}, userId = {}", calendarId, user.getId());
 
-    // 새로운 가능 시간 추가 (기존 setAvailableTime 메서드를 재사용)
-    setAvailableTime(calendarId, request, loginId);
+    // 새로운 가능 시간 등록 (가능 시간 추가 로직 재사용)
+    for (AvailableTimeSlot slot : request.getAvailableTimeSlots()) {
+      // AM/PM 정보를 포함한 시간 변환
+      LocalTime startTime =
+          convertToLocalTime(slot.getStartAmPm(), slot.getStartHour(), slot.getStartMinute());
+      LocalTime endTime =
+          convertToLocalTime(slot.getEndAmPm(), slot.getEndHour(), slot.getEndMinute());
+
+      LocalDateTime startDateTime = LocalDateTime.of(slot.getDate(), startTime);
+      LocalDateTime endDateTime = LocalDateTime.of(slot.getDate(), endTime);
+
+      // 날짜의 요일을 추출
+      DayOfWeek dayOfWeek = slot.getDate().getDayOfWeek();
+
+      // 고정 일정과 겹치는지 확인
+      boolean isConflict =
+          fixedScheduleRepository
+              .existsByUserIdAndDayOfWeekContainingAndStartTimeLessThanEqualAndEndTimeGreaterThanEqual(
+                  user.getId(), dayOfWeek, endTime, startTime);
+
+      if (isConflict) {
+        log.error(
+            "고정 일정과 겹칩니다: userId = {}, calendarId = {}, startTime = {}, endTime = {}",
+            user.getId(),
+            calendarId,
+            startDateTime,
+            endDateTime);
+        throw new RuntimeException("고정 일정과 겹치는 시간이 존재합니다.");
+      }
+
+      // 새로운 가능 시간 저장
+      AvailableTime availableTime = new AvailableTime();
+      availableTime.setUser(user);
+      availableTime.setCalendarId(calendarId);
+      availableTime.setStartTime(startDateTime);
+      availableTime.setEndTime(endDateTime);
+      availableTimeRepository.save(availableTime);
+      log.info("참여자의 가능 시간 수정 완료: calendarId = {}, userId = {}", calendarId, user.getId());
+    }
   }
 
   // 최적 시간 계산 및 합병로직
