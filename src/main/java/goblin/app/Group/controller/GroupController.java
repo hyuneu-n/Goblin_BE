@@ -130,6 +130,7 @@ public class GroupController {
   }
 
   // 일정 확정
+  @Operation(summary = "일정 확정", description = "후보 시간들 중 일정 확정")
   @PostMapping("/{groupId}/calendar/{calendarId}/confirm")
   public ResponseEntity<?> confirmCalendarEvent(
       @PathVariable Long groupId,
