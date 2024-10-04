@@ -32,7 +32,7 @@ public class WebSecurityConfig {
   public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
     httpSecurity
         .csrf(CsrfConfigurer::disable)
-        // Bearer 방식을 사용할건데 스프링 시큐리티는 httpBasic 이 잡혀있음x
+        // Bearer 방식을 사용할건데 스프링 시큐리티는 httpBasic 이 잡혀있음
         .httpBasic(HttpBasicConfigurer::disable)
         // Session 방식은 사용안할거여서 끔(stateless)
         .sessionManagement(
@@ -50,6 +50,8 @@ public class WebSecurityConfig {
                         "/api/users/check-id",
                         "/api/users/login",
                         "/api/groups/**",
+                        "/api/notify/**",
+                        "/api/fixed/**",
                         "/api/calendar/**")
                     .permitAll()
                     .requestMatchers("/api/v1/user/*")
@@ -59,8 +61,7 @@ public class WebSecurityConfig {
                     // 열어준 요청 외에는 모두 권한 필요
                     .anyRequest()
                     .authenticated())
-          .cors(cors -> cors.configurationSource(corsConfig.corsConfigurationSource()))
-       // .cors(Customizer.withDefaults());
+            .cors(Customizer.withDefaults());
 
     // JWT 필터 추가
     httpSecurity.addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
