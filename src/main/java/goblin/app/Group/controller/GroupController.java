@@ -318,27 +318,6 @@ public class GroupController {
     return ResponseEntity.ok("가능한 시간이 제출되었습니다.");
   }
 
-  // 가능 시간 수정
-  @Operation(summary = "가능한 시간 수정", description = "참여자가 가능한 시간을 수정")
-  @PutMapping("/{groupId}/calendar/{calendarId}/available-time")
-  public ResponseEntity<?> updateAvailableTime(
-      @PathVariable Long groupId,
-      @PathVariable Long calendarId,
-      @RequestBody AvailableTimeRequestDTO request,
-      @RequestHeader(value = "Authorization", required = true) String bearerToken) {
-
-    String loginId = extractLoginId(bearerToken);
-
-    // 그룹에 속해 있는지 확인
-    if (!groupService.isUserInGroup(groupId, loginId)) {
-      return ResponseEntity.status(HttpStatus.FORBIDDEN).body("해당 그룹의 멤버가 아닙니다.");
-    }
-
-    // 가능 시간 수정
-    groupService.updateAvailableTime(calendarId, request, loginId);
-    return ResponseEntity.ok("가능한 시간이 수정되었습니다.");
-  }
-
   @Operation(summary = "최적 시간 계산", description = "참여자들이 제출한 시간을 기반으로 가장 많은 팀원이 가능한 시간을 계산")
   @GetMapping("/calendar/{groupId}/{calendarId}/optimal-time")
   public ResponseEntity<?> calculateOptimalTime(
@@ -419,5 +398,26 @@ public class GroupController {
     groupService.inviteMember(groupId, loginId);
 
     return ResponseEntity.ok("그룹에 성공적으로 가입되었습니다.");
+  }
+
+  @Operation(summary = "그룹 일정 참가자 조회", description = "그룹의 일정에 참가한 사람들의 제출 여부 조회")
+  @GetMapping("/{groupId}/calendar/{calendarId}/participants")
+  public ResponseEntity<?> getParticipantsAvailability(
+      @PathVariable Long groupId,
+      @PathVariable Long calendarId,
+      @RequestHeader(value = "Authorization", required = true) String bearerToken) {
+
+    String loginId = extractLoginId(bearerToken);
+
+    // 그룹에 속해 있는지 확인
+    if (!groupService.isUserInGroup(groupId, loginId)) {
+      return ResponseEntity.status(HttpStatus.FORBIDDEN).body("해당 그룹의 멤버가 아닙니다.");
+    }
+
+    // 서비스 호출해서 참가자 정보 가져오기
+    List<GroupParticipantResponseDTO> participants =
+        groupService.getParticipantsForCalendar(groupId, calendarId);
+
+    return ResponseEntity.ok(participants);
   }
 }
