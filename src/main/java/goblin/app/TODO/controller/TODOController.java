@@ -158,14 +158,21 @@ public class TODOController {
     return ResponseEntity.ok("TODO가 삭제되었습니다.");
   }
 
-  @Operation(summary = "등록 날짜에 따른 TODO 목록 조회", description = "특정 날짜에 따라 TODO 목록을 조회")
-  @GetMapping("/todos/date")
+  @Operation(summary = "날짜별 TODO 목록 조회", description = "생성일~d-day까지에 해당하는 TODO 목록을 조회")
+  @GetMapping("/date")
   public ResponseEntity<List<TODOResponseDTO>> getTODOsByDate(
       @PathVariable Long groupId,
       @RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
       @RequestHeader("Authorization") String token) {
 
-    List<TODOResponseDTO> todos = todoService.getTODOsByDate(groupId, date);
+    String loginId = extractLoginId(token);
+
+    // 그룹에 속해 있는지 확인
+    if (!groupService.isUserInGroup(groupId, loginId)) {
+      return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
+    }
+
+    List<TODOResponseDTO> todos = todoService.getTODOsByDateRange(groupId, date);
     return ResponseEntity.ok(todos);
   }
 

@@ -1,7 +1,6 @@
 package goblin.app.TODO.model.entity;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -43,7 +42,7 @@ public class TODO {
 
   @CreationTimestamp
   @Column(nullable = false, updatable = false)
-  private LocalDateTime createdDate;
+  private LocalDate createdDate;
 
   public int calculateDDay() {
     return (int) java.time.temporal.ChronoUnit.DAYS.between(LocalDate.now(), this.dueDate);

@@ -1,8 +1,6 @@
 package goblin.app.TODO.service;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -85,11 +83,11 @@ public class TODOService {
     return new TODOResponseDTO(
         todo.getId(),
         todo.getTask(),
+        todo.getCreatedDate(),
         todo.getDueDate(),
         todo.isCompleted(),
         todo.calculateDDay(),
-        todo.getGroup().getGroupName(),
-        todo.getCreatedDate());
+        todo.getGroup().getGroupName());
   }
 
   public void cancelCompleted(Long todoId, String token) {
@@ -136,12 +134,10 @@ public class TODOService {
     todoRepository.delete(todo);
   }
 
-  // 특정 날짜에 생성된 TODO 목록 조회
-  public List<TODOResponseDTO> getTODOsByDate(Long groupId, LocalDate date) {
-    LocalDateTime startOfDay = date.atStartOfDay();
-    LocalDateTime endOfDay = date.atTime(LocalTime.MAX); // 하루의 끝시간까지 설정
-    List<TODO> todos =
-        todoRepository.findByGroupIdAndCreatedDateBetween(groupId, startOfDay, endOfDay);
+  // 날짜 범위에 해당하는 TODO 목록 조회
+  public List<TODOResponseDTO> getTODOsByDateRange(Long groupId, LocalDate date) {
+    List<TODO> todos = todoRepository.findByGroupIdAndDateRange(groupId, date);
+
     return todos.stream().map(this::convertToDTO).collect(Collectors.toList());
   }
 
