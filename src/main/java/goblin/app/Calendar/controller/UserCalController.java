@@ -20,11 +20,13 @@ import goblin.app.User.repository.UserRepository;
 import goblin.app.User.util.JwtUtil;
 import io.jsonwebtoken.Claims;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/api/calendar/user")
 @RequiredArgsConstructor
 @Slf4j
+@Tag(name = "개인 일정")
 public class UserCalController {
 
   @Autowired private final UserCalService userCalService;

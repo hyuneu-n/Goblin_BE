@@ -23,11 +23,13 @@ import goblin.app.User.service.UserService;
 import goblin.app.User.util.JwtUtil;
 import io.jsonwebtoken.Claims;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
 @Slf4j
+@Tag(name = "로그인/회원가입")
 public class UserController {
   private final UserService userService;
   private final JwtUtil jwtUtil;
