@@ -1,6 +1,5 @@
 package goblin.app.Group.service;
 
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -25,6 +24,7 @@ import goblin.app.Group.model.dto.GroupCalendarRequestDTO;
 import goblin.app.Group.model.dto.GroupCalendarResponseDTO;
 import goblin.app.Group.model.dto.GroupConfirmedCalendarDTO;
 import goblin.app.Group.model.dto.GroupMemberResponseDTO;
+import goblin.app.Group.model.dto.GroupParticipantResponseDTO;
 import goblin.app.Group.model.dto.GroupResponseDto;
 import goblin.app.Group.model.dto.TimeRange;
 import goblin.app.Group.model.dto.TimeSlot;
@@ -161,7 +161,13 @@ public class GroupService {
 
     groupCalendarRepository.save(groupCalendar);
 
-    // 참여자 등록
+    // 주최자를 일정의 첫 번째 참가자로 등록
+    GroupCalendarParticipant creatorParticipant = new GroupCalendarParticipant();
+    creatorParticipant.setCalendarId(groupCalendar.getId());
+    creatorParticipant.setUser(creator);
+    groupCalendarParticipantRepository.save(creatorParticipant);
+
+    // 다른 참여자 등록
     for (String loginId : request.getParticipants()) {
       User user =
           userRepository
@@ -174,7 +180,7 @@ public class GroupService {
 
       GroupCalendarParticipant participant = new GroupCalendarParticipant();
       participant.setCalendarId(groupCalendar.getId());
-      participant.setUserId(user.getId());
+      participant.setUser(user);
       groupCalendarParticipantRepository.save(participant);
     }
 
@@ -281,7 +287,6 @@ public class GroupService {
   // 그룹 일정 수정 로직
   @Transactional
   public void updateGroupEvent(Long calendarId, GroupCalendarRequestDTO request, String loginId) {
-    // 수정할 일정을 찾음
     GroupCalendar calendar =
         groupCalendarRepository
             .findById(calendarId)
@@ -305,10 +310,10 @@ public class GroupService {
     LocalTime endTime =
         convertToLocalTime(
             timeRange.getEndAmPm(), timeRange.getEndHour(), timeRange.getEndMinute());
-    calendar.setStartTime(startTime); // 시작 시간 설정
-    calendar.setEndTime(endTime); // 종료 시간 설정
+    calendar.setStartTime(startTime);
+    calendar.setEndTime(endTime);
 
-    groupCalendarRepository.save(calendar); // 수정된 일정 저장
+    groupCalendarRepository.save(calendar);
 
     // 일정에 참가자 재설정
     groupCalendarParticipantRepository.deleteAllByCalendarId(calendarId);
@@ -321,7 +326,7 @@ public class GroupService {
                   () -> new RuntimeException("유저를 찾을 수 없습니다: loginId = " + participantLoginId));
       GroupCalendarParticipant calendarParticipant = new GroupCalendarParticipant();
       calendarParticipant.setCalendarId(calendarId);
-      calendarParticipant.setUserId(participant.getId());
+      calendarParticipant.setUser(participant); // User 객체로 설정
       groupCalendarParticipantRepository.save(calendarParticipant);
     }
 
@@ -360,6 +365,7 @@ public class GroupService {
   }
 
   // 가능 시간 제출
+  @Transactional
   public void setAvailableTime(Long calendarId, AvailableTimeRequestDTO request, String loginId) {
     User user =
         userRepository
@@ -367,7 +373,7 @@ public class GroupService {
             .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다: loginId = " + loginId));
 
     for (AvailableTimeSlot slot : request.getAvailableTimeSlots()) {
-      // AM/PM 정보를 포함한 시간 변환
+      // 시간 변환 로직 생략
       LocalTime startTime =
           convertToLocalTime(slot.getStartAmPm(), slot.getStartHour(), slot.getStartMinute());
       LocalTime endTime =
@@ -375,25 +381,6 @@ public class GroupService {
 
       LocalDateTime startDateTime = LocalDateTime.of(slot.getDate(), startTime);
       LocalDateTime endDateTime = LocalDateTime.of(slot.getDate(), endTime);
-
-      // 날짜의 요일을 추출
-      DayOfWeek dayOfWeek = slot.getDate().getDayOfWeek();
-
-      // 고정 일정과 겹치는지 확인 (해당 요일에 고정 일정이 있고 시간이 겹치는지 검사)
-      boolean isConflict =
-          fixedScheduleRepository
-              .existsByUserIdAndDayOfWeekContainingAndStartTimeLessThanEqualAndEndTimeGreaterThanEqual(
-                  user.getId(), dayOfWeek, endTime, startTime);
-
-      if (isConflict) {
-        log.error(
-            "고정 일정과 겹칩니다: userId = {}, calendarId = {}, startTime = {}, endTime = {}",
-            user.getId(),
-            calendarId,
-            startDateTime,
-            endDateTime);
-        throw new RuntimeException("고정 일정과 겹치는 시간이 존재합니다."); // 예외 발생
-      }
 
       // 가능 시간 저장
       AvailableTime availableTime = new AvailableTime();
@@ -402,61 +389,19 @@ public class GroupService {
       availableTime.setStartTime(startDateTime);
       availableTime.setEndTime(endDateTime);
       availableTimeRepository.save(availableTime);
+
       log.info("참여자의 가능 시간 등록 완료: calendarId = {}, userId = {}", calendarId, user.getId());
     }
-  }
 
-  // 가능 시간 수정
-  @Transactional
-  public void updateAvailableTime(
-      Long calendarId, AvailableTimeRequestDTO request, String loginId) {
-    User user =
-        userRepository
-            .findByLoginId(loginId)
-            .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다: loginId = " + loginId));
+    // 제출 상태 업데이트
+    GroupCalendarParticipant participant =
+        groupCalendarParticipantRepository
+            .findByCalendarIdAndUser(calendarId, user)
+            .orElseThrow(() -> new RuntimeException("참여자를 찾을 수 없습니다."));
+    participant.setAvailableTimeSubmitted(true); // 제출 완료 상태로 변경
+    groupCalendarParticipantRepository.save(participant);
 
-    // 기존 가능 시간 삭제
-    availableTimeRepository.deleteByCalendarIdAndUserId(calendarId, user.getId());
-
-    // 새로운 가능 시간 등록 (가능 시간 추가 로직 재사용)
-    for (AvailableTimeSlot slot : request.getAvailableTimeSlots()) {
-      // AM/PM 정보를 포함한 시간 변환
-      LocalTime startTime =
-          convertToLocalTime(slot.getStartAmPm(), slot.getStartHour(), slot.getStartMinute());
-      LocalTime endTime =
-          convertToLocalTime(slot.getEndAmPm(), slot.getEndHour(), slot.getEndMinute());
-
-      LocalDateTime startDateTime = LocalDateTime.of(slot.getDate(), startTime);
-      LocalDateTime endDateTime = LocalDateTime.of(slot.getDate(), endTime);
-
-      // 날짜의 요일을 추출
-      DayOfWeek dayOfWeek = slot.getDate().getDayOfWeek();
-
-      // 고정 일정과 겹치는지 확인
-      boolean isConflict =
-          fixedScheduleRepository
-              .existsByUserIdAndDayOfWeekContainingAndStartTimeLessThanEqualAndEndTimeGreaterThanEqual(
-                  user.getId(), dayOfWeek, endTime, startTime);
-
-      if (isConflict) {
-        log.error(
-            "고정 일정과 겹칩니다: userId = {}, calendarId = {}, startTime = {}, endTime = {}",
-            user.getId(),
-            calendarId,
-            startDateTime,
-            endDateTime);
-        throw new RuntimeException("고정 일정과 겹치는 시간이 존재합니다.");
-      }
-
-      // 새로운 가능 시간 저장
-      AvailableTime availableTime = new AvailableTime();
-      availableTime.setUser(user);
-      availableTime.setCalendarId(calendarId);
-      availableTime.setStartTime(startDateTime);
-      availableTime.setEndTime(endDateTime);
-      availableTimeRepository.save(availableTime);
-      log.info("참여자의 가능 시간 수정 완료: calendarId = {}, userId = {}", calendarId, user.getId());
-    }
+    log.info("참여자의 가능 시간 제출 완료 상태 업데이트: calendarId = {}, userId = {}", calendarId, user.getId());
   }
 
   // 최적 시간 계산 및 합병로직
@@ -730,6 +675,35 @@ public class GroupService {
                 new GroupMemberResponseDTO(
                     member.getUser().getUsername(), member.getUser().getLoginId()))
         .collect(Collectors.toList());
+  }
+
+  public List<GroupParticipantResponseDTO> getParticipantsForCalendar(
+      Long groupId, Long calendarId) {
+    Group group =
+        groupRepository
+            .findById(groupId)
+            .orElseThrow(() -> new RuntimeException("그룹을 찾을 수 없습니다: groupId = " + groupId));
+
+    GroupCalendar calendar =
+        groupCalendarRepository
+            .findById(calendarId)
+            .orElseThrow(() -> new RuntimeException("일정을 찾을 수 없습니다: calendarId = " + calendarId));
+
+    // 해당 일정에 참여한 참가자들 정보 조회
+    List<GroupCalendarParticipant> participants =
+        groupCalendarParticipantRepository.findAllByCalendarId(calendarId);
+
+    // 응답 DTO로 변환
+    List<GroupParticipantResponseDTO> participantDTOs =
+        participants.stream()
+            .map(
+                participant ->
+                    new GroupParticipantResponseDTO(
+                        participant.getUser().getUsername(),
+                        participant.isAvailableTimeSubmitted()))
+            .collect(Collectors.toList());
+
+    return participantDTOs;
   }
 
   // 주최자 권한 확인 메서드
