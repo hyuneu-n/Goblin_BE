@@ -20,11 +20,13 @@ import goblin.app.User.repository.UserRepository;
 import goblin.app.User.util.JwtUtil;
 import io.jsonwebtoken.Claims;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/api/fixed")
 @RequiredArgsConstructor
 @Slf4j
+@Tag(name = "고정 일정")
 public class FixedScheduleController {
 
   private final FixedScheduleService fixedScheduleService;
@@ -33,7 +35,7 @@ public class FixedScheduleController {
 
   // 고정 일정 생성
   @PostMapping("/create")
-  @Operation(summary = "고정 일정 생성", description = "사용자의 고정 일정을 등록합니다.")
+  @Operation(summary = "고정 일정 생성", description = "고정 일정 등록")
   public ResponseEntity<FixedScheduleResponseDTO> createFixedSchedule(
       @RequestBody @Valid FixedScheduleRequestDTO requestDto,
       @RequestHeader(value = "Authorization", required = false) String bearerToken) {
@@ -92,7 +94,7 @@ public class FixedScheduleController {
   }
 
   // 고정 일정 삭제
-  @Operation(summary = "고정 일정 삭제", description = "기존 고정 일정을 삭제합니다.")
+  @Operation(summary = "고정 일정 삭제", description = "기존 고정 일정을 삭제")
   @DeleteMapping("/delete/{scheduleId}")
   public ResponseEntity<?> deleteFixedSchedule(
       @PathVariable Long scheduleId,

@@ -17,10 +17,12 @@ import goblin.app.TODO.service.TODOService;
 import goblin.app.User.util.JwtUtil;
 import io.jsonwebtoken.Claims;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/api/groups/{groupId}/todos")
 @RequiredArgsConstructor
+@Tag(name = "TODO")
 public class TODOController {
 
   private final TODOService todoService;

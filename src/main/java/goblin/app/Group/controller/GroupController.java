@@ -15,11 +15,13 @@ import goblin.app.Group.service.InviteTokenService;
 import goblin.app.User.util.JwtUtil;
 import io.jsonwebtoken.Claims;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/api/groups")
 @RequiredArgsConstructor
 @Slf4j
+@Tag(name = "그룹")
 public class GroupController {
 
   private final GroupService groupService;
@@ -168,7 +170,9 @@ public class GroupController {
   }
 
   // 새로운 일정 확정 로직 (범위 내에서 시간 선택)
-  @Operation(summary = "범위 내 시간 확정", description = "선택된 후보 시간 범위 내에서 직접 시간을 설정하여 확정")
+  @Operation(
+      summary = "일정 최종 확정",
+      description = "가장 적합한 시간들을 계산한 후 그 리스트들 중에서 하나를 선택하고, 그 범위 내에서 시간을 완전히 확정")
   @PostMapping("/{groupId}/calendar/{calendarId}/confirm-range")
   public ResponseEntity<?> confirmCustomTimeInRange(
       @PathVariable Long groupId,
@@ -209,7 +213,10 @@ public class GroupController {
   }
 
   // 후보 일정 조회
-  @Operation(summary = "그룹 후보 일정 조회 (확정 일정 X)", description = "그룹의 일정을 조회")
+  @Operation(
+      summary = "그룹 후보 일정 조회 (확정 일정 X)",
+      description =
+          "팀원들한테 '며칠 몇시부터 며칠 몇시까지의 시간 중 가능한 시간 선택하셈' 을 보낼 때에서 '며칠 몇시부터 며칠 몇시'까지의 일정조회를 담당하는 api")
   @GetMapping("/{groupId}/calendar")
   public ResponseEntity<?> getGroupCalendar(
       @PathVariable Long groupId,
@@ -332,7 +339,7 @@ public class GroupController {
     return ResponseEntity.ok("가능한 시간이 수정되었습니다.");
   }
 
-  @Operation(summary = "최적 시간 계산", description = "참여자들이 제출한 시간을 기반으로 가장 적합한 시간을 계산")
+  @Operation(summary = "최적 시간 계산", description = "참여자들이 제출한 시간을 기반으로 가장 많은 팀원이 가능한 시간을 계산")
   @GetMapping("/calendar/{groupId}/{calendarId}/optimal-time")
   public ResponseEntity<?> calculateOptimalTime(
       @PathVariable Long groupId,
