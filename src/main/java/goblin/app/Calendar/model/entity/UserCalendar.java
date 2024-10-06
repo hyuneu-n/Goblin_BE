@@ -5,20 +5,18 @@ import java.time.LocalDateTime;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import jakarta.persistence.*;
 
-import org.hibernate.annotations.OnDelete;
-import org.hibernate.annotations.OnDeleteAction;
-
 import com.fasterxml.jackson.annotation.JsonFormat;
 
-import goblin.app.Category.model.entity.Category;
 import goblin.app.Common.config.BooleanToYNConverter;
 import goblin.app.User.model.entity.User;
 
 @Entity
 @Getter
+@Setter
 @NoArgsConstructor
 @Table(name = "user_calendar")
 public class UserCalendar {
@@ -31,11 +29,6 @@ public class UserCalendar {
   @JoinColumn(name = "user_id")
   private User user;
 
-  @JoinColumn(name = "category_id")
-  @ManyToOne(fetch = FetchType.LAZY)
-  @OnDelete(action = OnDeleteAction.CASCADE)
-  private Category category;
-
   @Column(nullable = false)
   private String title;
 
@@ -44,30 +37,29 @@ public class UserCalendar {
   private String note;
 
   @Column(name = "start_time")
-  @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+  @JsonFormat(pattern = "yyyy-MM-dd HH:mm")
   private LocalDateTime startTime;
 
   @Column(name = "end_time")
-  @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+  @JsonFormat(pattern = "yyyy-MM-dd HH:mm")
   private LocalDateTime endTime;
 
   @Convert(converter = BooleanToYNConverter.class)
   private Boolean deleted = false;
 
+  // 시간블럭 색상코드
+  @Column(name = "color", nullable = false)
+  private String color = "CCD7E5";
+
   @Builder
   public UserCalendar(
-      Category category,
-      User user,
-      String title,
-      String note,
-      LocalDateTime startTime,
-      LocalDateTime endTime) {
-    this.category = category;
+      User user, String title, String note, LocalDateTime startTime, LocalDateTime endTime) {
     this.user = user;
     this.title = title;
     this.note = note;
     this.startTime = startTime;
     this.endTime = endTime;
+    this.color = "CCD7E5";
   }
 
   public void update(Long id, String title, LocalDateTime startTime, LocalDateTime endTime) {

@@ -1,65 +1,73 @@
 package goblin.app.Calendar.service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import goblin.app.Calendar.model.dto.request.uCalEditRequestDto;
 import goblin.app.Calendar.model.dto.request.uCalSaveRequestDto;
 import goblin.app.Calendar.model.dto.response.uCalResponseDto;
 import goblin.app.Calendar.model.entity.UserCalRepository;
 import goblin.app.Calendar.model.entity.UserCalendar;
-import goblin.app.Category.model.entity.Category;
-import goblin.app.Category.model.entity.CategoryRepository;
 import goblin.app.Common.exception.CustomException;
 import goblin.app.Common.exception.ErrorCode;
 import goblin.app.User.model.entity.User;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class UserCalService {
 
   private final UserCalRepository userCalRepository;
-  private final CategoryRepository categoryRepository;
 
-  // 고정 스케줄 등록
+  // 일반 스케쥴 등록
   @Transactional
   public uCalResponseDto save(uCalSaveRequestDto requestDto, User currentUser) {
-    Category category =
-        categoryRepository
-            .findById(requestDto.getCategoryId())
-            .orElseThrow(() -> new CustomException(ErrorCode.CATEGORY_NOT_FOUND));
+    LocalDateTime startTime = requestDto.getStartTime(); // 변환된 startTime
+    LocalDateTime endTime = requestDto.getEndTime(); // 변환된 endTime
 
-    UserCalendar userCalendar = userCalRepository.save(requestDto.toEntity(currentUser, category));
+    UserCalendar userCalendar =
+        UserCalendar.builder()
+            .title(requestDto.getTitle())
+            .note(requestDto.getNote())
+            .user(currentUser)
+            .startTime(startTime)
+            .endTime(endTime)
+            .build();
+
+    userCalRepository.save(userCalendar);
+
     return new uCalResponseDto(userCalendar);
   }
 
-  // 고정 스케줄 수정
+  // 일반 스케쥴 수정
   @Transactional
-  public uCalResponseDto edit(uCalEditRequestDto requestDto, User currentUser) {
+  public uCalResponseDto edit(Long scheduleId, uCalSaveRequestDto requestDto, User currentUser) {
     UserCalendar userCalendar =
         userCalRepository
-            .findById(requestDto.getId())
+            .findById(scheduleId)
             .orElseThrow(() -> new CustomException(ErrorCode.SCHEDULE_NOT_FOUND));
 
     // 작성자인지 체크
     validateUser(userCalendar, currentUser);
 
+    // AM/PM 시간을 LocalDateTime으로 변환
+    LocalDateTime startTime = requestDto.getStartTime(); // 변환된 startTime
+    LocalDateTime endTime = requestDto.getEndTime(); // 변환된 endTime
+
     // 일정 수정
-    userCalendar.update(
-        requestDto.getId(),
-        requestDto.getTitle(),
-        requestDto.getStartTime(),
-        requestDto.getEndTime());
+    userCalendar.update(scheduleId, requestDto.getTitle(), startTime, endTime);
+
     return new uCalResponseDto(userCalendar);
   }
 
-  // 고정 스케줄 삭제 (hard delete)
+  // 개인 일반 스케줄 삭제 (hard delete)
   @Transactional
   public uCalResponseDto deleteById(Long id, User currentUser) {
     UserCalendar userCalendar =
@@ -74,7 +82,7 @@ public class UserCalService {
     return new uCalResponseDto(userCalendar);
   }
 
-  // 고정 스케줄 월별 조회 (3개까지만 조회)
+  // 개인 스케줄 월별 조회 (3개까지만 조회)
   @Transactional
   public List<uCalResponseDto> viewByMonth(int year, int month, User user) {
     int[] yearMonth = validateYearAndMonth(year, month);
@@ -84,7 +92,7 @@ public class UserCalService {
     return scheduleList.stream().limit(3).map(uCalResponseDto::new).collect(Collectors.toList());
   }
 
-  // 고정 스케줄 일별 조회
+  // 개인 스케줄 일별 조회
   @Transactional
   public List<uCalResponseDto> viewByDay(int year, int month, int day, User user) {
     int[] yearMonth = validateYearAndMonth(year, month);
@@ -106,30 +114,35 @@ public class UserCalService {
   }
    */
 
-  // 카테고리별 스케줄 조회
-  @Transactional
-  public List<uCalResponseDto> viewByCategory(Long categoryId, User currentUser) {
-    Category category =
-        categoryRepository
-            .findById(categoryId)
-            .orElseThrow(() -> new CustomException(ErrorCode.CATEGORY_NOT_FOUND));
+  //  // 카테고리별 스케줄 조회
+  //  @Transactional
+  //  public List<uCalResponseDto> viewByCategory(Long categoryId, User currentUser) {
+  //    Category category =
+  //        categoryRepository
+  //            .findById(categoryId)
+  //            .orElseThrow(() -> new CustomException(ErrorCode.CATEGORY_NOT_FOUND));
+  //
+  //    List<UserCalendar> scheduleList =
+  //        userCalRepository.findByCategoryAndUser(category, currentUser);
+  //    return scheduleList.stream().map(uCalResponseDto::new).collect(Collectors.toList());
+  //  }
 
-    List<UserCalendar> scheduleList =
-        userCalRepository.findByCategoryAndUser(category, currentUser);
-    return scheduleList.stream().map(uCalResponseDto::new).collect(Collectors.toList());
-  }
-
-  // 고정 스케줄 검색 기능
+  // 개인 스케줄 검색 기능
   @Transactional
   public List<uCalResponseDto> searchSchedules(String keyword, User currentUser) {
     List<UserCalendar> scheduleList =
-        userCalRepository.findByTitleContainingAndUser(keyword, currentUser);
+        userCalRepository.findByTitleContainingAndUserAndDeletedFalse(keyword, currentUser);
     return scheduleList.stream().map(uCalResponseDto::new).collect(Collectors.toList());
   }
 
   // 작성자 검증 메서드
   private void validateUser(UserCalendar userCalendar, User currentUser) {
-    if (!userCalendar.getUser().equals(currentUser)) {
+    log.info(
+        "userCalendar 작성자: {}, 현재 사용자: {}",
+        userCalendar.getUser().getLoginId(),
+        currentUser.getLoginId());
+
+    if (!userCalendar.getUser().getLoginId().equals(currentUser.getLoginId())) {
       throw new CustomException(ErrorCode.UNAUTHORIZED_ACCESS); // 권한 없음 예외 처리
     }
   }

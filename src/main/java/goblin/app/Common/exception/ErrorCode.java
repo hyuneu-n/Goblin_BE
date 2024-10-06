@@ -15,6 +15,7 @@ public enum ErrorCode {
 
   // 카테고리
   CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "검증에 실패하였습니다."),
+  CATEGORY_DELETED(HttpStatus.BAD_REQUEST, "삭제된 카테고리입니다."),
 
   // 달력
   SCHEDULE_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 일정입니다."),
@@ -25,8 +26,12 @@ public enum ErrorCode {
   // 토큰 예외
   TOKEN_EXPIRED(HttpStatus.UNAUTHORIZED, "토큰이 만료되었습니다."),
   TOKEN_INVALID(HttpStatus.UNAUTHORIZED, "토큰이 유효하지 않습니다."),
+
   // 경로 예외
-  NOT_VALID_URI(HttpStatus.BAD_REQUEST, "유효한 경로로 요청해주세요.");
+  NOT_VALID_URI(HttpStatus.BAD_REQUEST, "유효한 경로로 요청해주세요."),
+
+  // 시간 충돌 예외
+  TIME_CONFLICT(HttpStatus.CONFLICT, "The selected time conflicts with a fixed schedule");
 
   private HttpStatus status;
   private String detail;

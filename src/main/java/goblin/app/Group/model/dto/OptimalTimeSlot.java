@@ -11,7 +11,7 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 public class OptimalTimeSlot {
-
+  private Long calendarId;
   private LocalDateTime startTime;
   private LocalDateTime endTime;
   private List<String> participants;

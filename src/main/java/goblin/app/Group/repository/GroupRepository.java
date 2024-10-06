@@ -22,4 +22,6 @@ public interface GroupRepository extends JpaRepository<Group, Long> {
   // 삭제되지 않은 특정 그룹만 조회
   @Query("SELECT g FROM Group g WHERE g.groupId = :groupId AND g.deleted = false")
   Optional<Group> findByIdAndNotDeleted(Long groupId);
+
+  boolean existsByGroupName(String groupName);
 }

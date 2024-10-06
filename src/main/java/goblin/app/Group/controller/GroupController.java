@@ -10,18 +10,18 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import goblin.app.Group.model.dto.*;
-import goblin.app.Group.model.entity.Group;
-import goblin.app.Group.model.entity.GroupCalendar;
 import goblin.app.Group.service.GroupService;
 import goblin.app.Group.service.InviteTokenService;
 import goblin.app.User.util.JwtUtil;
 import io.jsonwebtoken.Claims;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/api/groups")
 @RequiredArgsConstructor
 @Slf4j
+@Tag(name = "그룹")
 public class GroupController {
 
   private final GroupService groupService;
@@ -80,7 +80,7 @@ public class GroupController {
   }
 
   // 일정 삭제 (Soft Delete)
-  @Operation(summary = "일정 삭제", description = "그룹 일정을 삭제 (Soft Delete, 방장만 가능)")
+  @Operation(summary = "그룹 일정 삭제", description = "그룹 일정을 삭제 (주최자만 가능)")
   @DeleteMapping("/{groupId}/calendar/{calendarId}")
   public ResponseEntity<?> deleteCalendarEvent(
       @PathVariable Long groupId,
@@ -88,8 +88,7 @@ public class GroupController {
       @RequestHeader(value = "Authorization", required = true) String bearerToken) {
     try {
       String loginId = extractLoginId(bearerToken);
-      groupService.validateGroupOwner(groupId, loginId);
-      groupService.deleteCalendarEvent(calendarId);
+      groupService.deleteCalendarEvent(calendarId, loginId);
       return ResponseEntity.ok("일정이 삭제되었습니다.");
     } catch (RuntimeException e) {
       log.error("일정 삭제 실패: {}", e.getMessage());
@@ -132,48 +131,22 @@ public class GroupController {
     }
   }
 
-  // 다시 짠다
   // 일정 확정
-  @Operation(summary = "후보 시간 확정", description = "후보 시간 중 하나를 선택하여 일정을 확정")
+  @Operation(summary = "일정 확정", description = "후보 시간들 중 일정 확정")
   @PostMapping("/{groupId}/calendar/{calendarId}/confirm")
   public ResponseEntity<?> confirmCalendarEvent(
       @PathVariable Long groupId,
       @PathVariable Long calendarId,
-      @RequestBody Long selectedTimeSlotId, // 선택된 후보 시간의 ID를 받음
+      @RequestBody Long selectedTimeSlotId,
       @RequestHeader(value = "Authorization", required = true) String bearerToken) {
-
-    String loginId = extractLoginId(bearerToken);
-
-    // 그룹에 속해 있는지 확인
-    if (!groupService.isUserInGroup(groupId, loginId)) {
-      return ResponseEntity.status(HttpStatus.FORBIDDEN).body("해당 그룹의 멤버가 아닙니다.");
+    try {
+      String loginId = extractLoginId(bearerToken);
+      groupService.confirmCalendarEvent(calendarId, selectedTimeSlotId, loginId);
+      return ResponseEntity.ok("일정이 확정되었습니다.");
+    } catch (RuntimeException e) {
+      log.error("일정 확정 실패: {}", e.getMessage());
+      return ResponseEntity.badRequest().body(e.getMessage());
     }
-
-    // 선택된 후보 시간을 기반으로 일정 확정 및 개인 캘린더 저장
-    groupService.confirmCalendarEvent(calendarId, selectedTimeSlotId, loginId);
-    return ResponseEntity.ok("일정이 확정되었습니다.");
-  }
-
-  @Operation(
-      summary = "임의 시간 확정 (후보 일정 중 정하지 않을 때)",
-      description = "사용자가 임의의 시작 시간과 종료 시간을 입력하여 일정을 확정")
-  @PostMapping("/{groupId}/calendar/{calendarId}/custom-confirm")
-  public ResponseEntity<?> confirmCustomTime(
-      @PathVariable Long groupId,
-      @PathVariable Long calendarId,
-      @RequestBody TimeSlot customTime, // 임의로 입력한 시간
-      @RequestHeader(value = "Authorization", required = true) String bearerToken) {
-
-    String loginId = extractLoginId(bearerToken);
-
-    // 그룹에 속해 있는지 확인
-    if (!groupService.isUserInGroup(groupId, loginId)) {
-      return ResponseEntity.status(HttpStatus.FORBIDDEN).body("해당 그룹의 멤버가 아닙니다.");
-    }
-
-    // 임의의 시간으로 일정 확정
-    groupService.confirmCustomTime(calendarId, customTime);
-    return ResponseEntity.ok("임의의 시간으로 일정이 확정되었습니다.");
   }
 
   @Operation(summary = "확정된 일정 조회", description = "확정된 일정을 조회")
@@ -196,6 +169,34 @@ public class GroupController {
     return ResponseEntity.ok(confirmedCalendar);
   }
 
+  // 새로운 일정 확정 로직 (범위 내에서 시간 선택)
+  @Operation(
+      summary = "일정 최종 확정",
+      description = "가장 적합한 시간들을 계산한 후 그 리스트들 중에서 하나를 선택하고, 그 범위 내에서 시간을 완전히 확정")
+  @PostMapping("/{groupId}/calendar/{calendarId}/confirm-range")
+  public ResponseEntity<?> confirmCustomTimeInRange(
+      @PathVariable Long groupId,
+      @PathVariable Long calendarId,
+      @RequestBody ConfirmTimeRangeRequest request, // 요청으로 범위 내 시간 입력 받음
+      @RequestHeader(value = "Authorization", required = true) String bearerToken) {
+
+    String loginId = extractLoginId(bearerToken);
+
+    // 그룹에 속해 있는지 확인
+    if (!groupService.isUserInGroup(groupId, loginId)) {
+      return ResponseEntity.status(HttpStatus.FORBIDDEN).body("해당 그룹의 멤버가 아닙니다.");
+    }
+
+    // 범위 내에서 사용자 지정 시간 확정
+    try {
+      groupService.confirmCustomTimeInRange(
+          calendarId, request.getOptimalTimeSlotId(), request, loginId);
+      return ResponseEntity.ok("일정이 확정되었습니다.");
+    } catch (RuntimeException e) {
+      return ResponseEntity.badRequest().body(e.getMessage());
+    }
+  }
+
   // 그룹 조회
   @Operation(summary = "그룹 조회", description = "로그인한 사용자의 그룹 목록을 조회")
   @GetMapping
@@ -203,7 +204,7 @@ public class GroupController {
       @RequestHeader(value = "Authorization", required = true) String bearerToken) {
     try {
       String loginId = extractLoginId(bearerToken);
-      List<Group> groups = groupService.getUserGroups(loginId);
+      List<GroupResponseDto> groups = groupService.getUserGroups(loginId);
       return ResponseEntity.ok(groups);
     } catch (RuntimeException e) {
       log.error("그룹 조회 실패: {}", e.getMessage());
@@ -211,8 +212,11 @@ public class GroupController {
     }
   }
 
-  // 그룹 캘린더 조회
-  @Operation(summary = "그룹 일정 조회", description = "그룹의 일정을 조회")
+  // 후보 일정 조회
+  @Operation(
+      summary = "그룹 후보 일정 조회 (확정 일정 X)",
+      description =
+          "팀원들한테 '며칠 몇시부터 며칠 몇시까지의 시간 중 가능한 시간 선택하셈' 을 보낼 때에서 '며칠 몇시부터 며칠 몇시'까지의 일정조회를 담당하는 api")
   @GetMapping("/{groupId}/calendar")
   public ResponseEntity<?> getGroupCalendar(
       @PathVariable Long groupId,
@@ -227,7 +231,7 @@ public class GroupController {
       }
 
       // 그룹 일정 조회
-      List<GroupCalendar> events = groupService.getGroupCalendar(groupId);
+      List<GroupCalendarResponseDTO> events = groupService.getGroupCalendar(groupId);
       return ResponseEntity.ok(events);
     } catch (RuntimeException e) {
       log.error("그룹 캘린더 조회 실패: {}", e.getMessage());
@@ -314,7 +318,7 @@ public class GroupController {
     return ResponseEntity.ok("가능한 시간이 제출되었습니다.");
   }
 
-  @Operation(summary = "최적 시간 계산", description = "참여자들이 제출한 시간을 기반으로 가장 적합한 시간을 계산")
+  @Operation(summary = "최적 시간 계산", description = "참여자들이 제출한 시간을 기반으로 가장 많은 팀원이 가능한 시간을 계산")
   @GetMapping("/calendar/{groupId}/{calendarId}/optimal-time")
   public ResponseEntity<?> calculateOptimalTime(
       @PathVariable Long groupId,
@@ -330,8 +334,8 @@ public class GroupController {
     }
 
     try {
-      // 최적 시간 계산 로직 수행, TimeSlot 리스트 반환
-      List<TimeSlot> timeSlots = groupService.calculateOptimalTimes(calendarId);
+      // 최적 시간 계산 및 저장 로직 수행, TimeSlot 리스트 반환
+      List<TimeSlot> timeSlots = groupService.calculateOptimalTimesAndSave(calendarId);
 
       // 변환된 TimeSlot 리스트를 성공적으로 반환
       return ResponseEntity.ok(timeSlots);
@@ -394,5 +398,26 @@ public class GroupController {
     groupService.inviteMember(groupId, loginId);
 
     return ResponseEntity.ok("그룹에 성공적으로 가입되었습니다.");
+  }
+
+  @Operation(summary = "그룹 일정 참가자 조회", description = "그룹의 일정에 참가한 사람들의 제출 여부 조회")
+  @GetMapping("/{groupId}/calendar/{calendarId}/participants")
+  public ResponseEntity<?> getParticipantsAvailability(
+      @PathVariable Long groupId,
+      @PathVariable Long calendarId,
+      @RequestHeader(value = "Authorization", required = true) String bearerToken) {
+
+    String loginId = extractLoginId(bearerToken);
+
+    // 그룹에 속해 있는지 확인
+    if (!groupService.isUserInGroup(groupId, loginId)) {
+      return ResponseEntity.status(HttpStatus.FORBIDDEN).body("해당 그룹의 멤버가 아닙니다.");
+    }
+
+    // 서비스 호출해서 참가자 정보 가져오기
+    List<GroupParticipantResponseDTO> participants =
+        groupService.getParticipantsForCalendar(groupId, calendarId);
+
+    return ResponseEntity.ok(participants);
   }
 }

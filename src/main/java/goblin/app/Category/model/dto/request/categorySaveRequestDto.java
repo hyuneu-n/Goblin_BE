@@ -14,13 +14,19 @@ import goblin.app.User.model.entity.User;
 public class categorySaveRequestDto {
 
   @NotBlank private String categoryName;
+  private int colorCode; // 색상 코드 추가
 
   @Builder
-  public categorySaveRequestDto(String categoryName) {
+  public categorySaveRequestDto(String categoryName, int colorCode) {
     this.categoryName = categoryName;
+    this.colorCode = colorCode;
   }
 
-  public Category toEntity(User user) {
-    return Category.builder().categoryName(categoryName).user(user).build();
+  public Category toEntity(User user, String color) {
+    return Category.builder()
+        .categoryName(categoryName)
+        .user(user)
+        .color(color) // 색상 값을 전달받아 설정
+        .build();
   }
 }

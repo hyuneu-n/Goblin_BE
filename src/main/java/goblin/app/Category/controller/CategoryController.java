@@ -23,11 +23,13 @@ import goblin.app.User.repository.UserRepository;
 import goblin.app.User.util.JwtUtil;
 import io.jsonwebtoken.Claims;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/api/calendar/user/category")
 @Slf4j
 @RequiredArgsConstructor
+@Tag(name = "카테고리")
 public class CategoryController {
 
   @Autowired private final CategoryService categoryService;
@@ -36,7 +38,7 @@ public class CategoryController {
 
   // 카테고리 저장
   @PostMapping("/save")
-  @Operation(summary = "카테고리 저장", description = "새로운 카테고리를 저장합니다.")
+  @Operation(summary = "카테고리 생성", description = "새로운 카테고리 생성")
   public ResponseEntity<categoryResponseDto> save(
       @RequestBody categorySaveRequestDto requestDto,
       @RequestHeader(value = "Authorization", required = false) String bearerToken) {
@@ -52,7 +54,7 @@ public class CategoryController {
 
   // 카테고리 수정
   @PutMapping("/edit")
-  @Operation(summary = "카테고리 수정", description = "카테고리를 수정합니다.")
+  @Operation(summary = "카테고리 수정", description = "카테고리 수정")
   public ResponseEntity<categoryResponseDto> edit(
       @RequestBody @Valid categoryEditRequestDto requestDto,
       @RequestHeader(value = "Authorization", required = false) String bearerToken) {
@@ -68,7 +70,7 @@ public class CategoryController {
 
   // 카테고리 삭제
   @DeleteMapping("/delete/{categoryId}")
-  @Operation(summary = "카테고리 삭제", description = "카테고리를 삭제합니다.")
+  @Operation(summary = "카테고리 삭제", description = "카테고리 삭제")
   public ResponseEntity<String> delete(
       @PathVariable Long categoryId,
       @RequestHeader(value = "Authorization", required = false) String bearerToken) {
@@ -84,7 +86,7 @@ public class CategoryController {
 
   // 카테고리 가시성 설정
   @PutMapping("/visibility/edit")
-  @Operation(summary = "카테고리 공개 여부 설정", description = "그룹별 고정 일정 카테고리의 공개 여부를 설정합니다.")
+  @Operation(summary = "카테고리 공개 여부 설정", description = "그룹별 고정 일정 카테고리의 공개 여부 설정")
   public ResponseEntity<categoryVisibilityResponseDto> setCategoryVisibility(
       @RequestBody @Valid categoryViEditRequestDto requestDto,
       @RequestHeader(value = "Authorization", required = false) String bearerToken) {
@@ -100,7 +102,7 @@ public class CategoryController {
   }
 
   @GetMapping("/visibility/view")
-  @Operation(summary = "카테고리 공개 여부 조회", description = "그룹별 고정 일정 카테고리의 공개 여부를 조회합니다.")
+  @Operation(summary = "카테고리 공개 여부 조회", description = "그룹별 고정 일정 카테고리의 공개 여부를 조회")
   public ResponseEntity<List<categoryVisibilityResponseDto>> getCategoryVisibility(
       @RequestParam Long groupId,
       @RequestHeader(value = "Authorization", required = false) String bearerToken) {

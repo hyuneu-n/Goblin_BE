@@ -9,6 +9,10 @@ import lombok.Setter;
 @Setter
 public class AvailableTimeSlot {
   private LocalDate date; // 날짜
-  private String startTime; // 시작 시간
-  private String endTime; // 종료 시간
+  private String startAmPm; // 시작 시간 AM/PM
+  private int startHour; // 시작 시간 (시)
+  private int startMinute; // 시작 시간 (분)
+  private String endAmPm; // 종료 시간 AM/PM
+  private int endHour; // 종료 시간 (시)
+  private int endMinute; // 종료 시간 (분)
 }

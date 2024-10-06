@@ -12,7 +12,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import goblin.app.Calendar.model.dto.request.uCalEditRequestDto;
 import goblin.app.Calendar.model.dto.request.uCalSaveRequestDto;
 import goblin.app.Calendar.model.dto.response.uCalResponseDto;
 import goblin.app.Calendar.service.UserCalService;
@@ -20,11 +19,14 @@ import goblin.app.User.model.entity.User;
 import goblin.app.User.repository.UserRepository;
 import goblin.app.User.util.JwtUtil;
 import io.jsonwebtoken.Claims;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/api/calendar/user")
 @RequiredArgsConstructor
 @Slf4j
+@Tag(name = "개인 일정")
 public class UserCalController {
 
   @Autowired private final UserCalService userCalService;
@@ -32,7 +34,8 @@ public class UserCalController {
 
   @Autowired private final UserRepository userRepository;
 
-  // 유저 캘린더 저장
+  // 일반 스케쥴 등록
+  @Operation(summary = "일반 일정 등록", description = "사용자의 새로운 일정을 캘린더에 저장")
   @PostMapping("/save")
   public ResponseEntity<uCalResponseDto> save(
       @RequestBody @Valid uCalSaveRequestDto requestDto,
@@ -48,13 +51,16 @@ public class UserCalController {
   }
 
   // 유저 캘린더 수정
+  @Operation(summary = "유저 캘린더 수정", description = "기존 캘린더 일정 수정")
   @PutMapping("/edit")
   public ResponseEntity<uCalResponseDto> edit(
-      @RequestBody @Valid uCalEditRequestDto requestDto,
-      @RequestHeader(value = "Authorization", required = false) String bearerToken) {
+      @RequestBody @Valid uCalSaveRequestDto requestDto, // @Valid 적용
+      @RequestHeader(value = "Authorization", required = false) String bearerToken,
+      @RequestHeader(value = "Schedule-Id") Long scheduleId) { // 헤더에서 ID 받기
     try {
       User user = getUserFromToken(bearerToken);
-      uCalResponseDto responseDto = userCalService.edit(requestDto, user);
+      uCalResponseDto responseDto =
+          userCalService.edit(scheduleId, requestDto, user); // scheduleId 전달
       return ResponseEntity.status(HttpStatus.OK).body(responseDto);
     } catch (RuntimeException e) {
       log.error("유저 캘린더 수정 실패: {}", e.getMessage());
@@ -63,6 +69,7 @@ public class UserCalController {
   }
 
   // 유저 캘린더 삭제
+  @Operation(summary = "유저 캘린더 삭제", description = "사용자의 특정 일정을 캘린더에서 삭제")
   @DeleteMapping("/delete/{scheduleId}")
   public ResponseEntity<uCalResponseDto> delete(
       @PathVariable Long scheduleId,
@@ -78,6 +85,7 @@ public class UserCalController {
   }
 
   // 특정 달의 캘린더 조회
+  @Operation(summary = "월별 캘린더 조회", description = "사용자가 입력한 특정 년도와 월의 일정을 조회")
   @GetMapping("/view-month")
   public ResponseEntity<List<uCalResponseDto>> viewByMonth(
       @RequestParam int year,
@@ -94,6 +102,7 @@ public class UserCalController {
   }
 
   // 특정 일의 캘린더 조회
+  @Operation(summary = "일별 캘린더 조회", description = "사용자가 입력한 특정 년, 월, 일의 일정을 조회")
   @GetMapping("/view-day")
   public ResponseEntity<List<uCalResponseDto>> viewByDay(
       @RequestParam int year,
@@ -110,22 +119,8 @@ public class UserCalController {
     }
   }
 
-  // 카테고리별 스케줄 조회
-  @GetMapping("/category/{categoryId}")
-  public ResponseEntity<List<uCalResponseDto>> viewByCategory(
-      @PathVariable Long categoryId,
-      @RequestHeader(value = "Authorization", required = false) String bearerToken) {
-    try {
-      User user = getUserFromToken(bearerToken);
-      List<uCalResponseDto> response = userCalService.viewByCategory(categoryId, user);
-      return ResponseEntity.ok(response);
-    } catch (RuntimeException e) {
-      log.error("카테고리별 스케줄 조회 실패: {}", e.getMessage());
-      return ResponseEntity.badRequest().body(null);
-    }
-  }
-
-  // 고정 스케줄 검색
+  // 개인 스케줄 검색 (고정X)
+  @Operation(summary = "개인 스케줄 검색 (고정X)", description = "키워드를 통해 사용자의 개인 스케줄을 검색")
   @GetMapping("/search")
   public ResponseEntity<List<uCalResponseDto>> searchSchedules(
       @RequestParam String keyword,

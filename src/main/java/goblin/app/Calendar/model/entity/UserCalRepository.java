@@ -6,7 +6,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import goblin.app.Category.model.entity.Category;
 import goblin.app.User.model.entity.User;
 
 public interface UserCalRepository extends JpaRepository<UserCalendar, Long> {
@@ -28,9 +27,7 @@ public interface UserCalRepository extends JpaRepository<UserCalendar, Long> {
       @Param("day") int day,
       @Param("user") User user);
 
-  @Query("SELECT u FROM UserCalendar u WHERE u.category = :category AND u.user = :user")
-  List<UserCalendar> findByCategoryAndUser(
-      @Param("category") Category category, @Param("user") User user);
-
   List<UserCalendar> findByTitleContainingAndUser(String title, User user);
+  // 제목에 키워드를 포함하고, 해당 유저의 일정 중에서 삭제되지 않은 것만 검색
+  List<UserCalendar> findByTitleContainingAndUserAndDeletedFalse(String title, User user);
 }
