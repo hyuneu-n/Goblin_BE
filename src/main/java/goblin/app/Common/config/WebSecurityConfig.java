@@ -50,9 +50,9 @@ public class WebSecurityConfig {
                         "/api/users/check-id",
                         "/api/users/login",
                         "/api/groups/**",
-                        "/api/notify/**",
+                        "/api/calendar/**",
                         "/api/fixed/**",
-                        "/api/calendar/**")
+                        "/api/groups/{groupId}/todos/**")
                     .permitAll()
                     .requestMatchers("/api/v1/user/*")
                     .hasRole("USER")
@@ -61,7 +61,7 @@ public class WebSecurityConfig {
                     // 열어준 요청 외에는 모두 권한 필요
                     .anyRequest()
                     .authenticated())
-            .cors(Customizer.withDefaults());
+        .cors(Customizer.withDefaults());
 
     // JWT 필터 추가
     httpSecurity.addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
