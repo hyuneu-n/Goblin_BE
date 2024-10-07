@@ -148,29 +148,6 @@ public class GroupController {
   }
 
 
-  // 일정 확정
-  @PostMapping("/{groupId}/calendar/{calendarId}/confirm")
-  public ResponseEntity<?> confirmCalendarEvent(
-      @PathVariable Long groupId,
-      @PathVariable Long calendarId,
-      @RequestBody Long selectedTimeSlotId,
-      @RequestHeader(value = "Last-Event-ID", required = false, defaultValue = "")
-          String lastEventId, // SSE 이벤트 ID
-      @RequestHeader(value = "Authorization", required = true) String bearerToken) {
-    try {
-      String loginId = extractLoginId(bearerToken);
-
-      // 알림
-      // notificationService.eventNotify(loginId, lastEventId);
-      notificationService.eventFixedNotify(calendarId);
-
-      return ResponseEntity.ok("일정이 확정되었습니다.");
-    } catch (RuntimeException e) {
-      log.error("일정 확정 실패: {}", e.getMessage());
-      return ResponseEntity.badRequest().body(e.getMessage());
-    }
-  }
-
   @Operation(summary = "확정된 일정 조회", description = "확정된 일정을 조회")
   @GetMapping("/{groupId}/calendar/{calendarId}/confirmed")
   public ResponseEntity<?> getConfirmedCalendar(
@@ -203,6 +180,9 @@ public class GroupController {
       @RequestHeader(value = "Authorization", required = true) String bearerToken) {
 
     String loginId = extractLoginId(bearerToken);
+
+    // 모든 사용자들에게 알림
+    notificationService.eventFixedNotify(calendarId);
 
     // 그룹에 속해 있는지 확인
     if (!groupService.isUserInGroup(groupId, loginId)) {
@@ -337,6 +317,8 @@ public class GroupController {
 
     groupService.setAvailableTime(calendarId, request, loginId);
 
+
+
     return ResponseEntity.ok("가능한 시간이 제출되었습니다.");
   }
 
@@ -461,21 +443,8 @@ public class GroupController {
     return ResponseEntity.ok(availableTimes);
   }
 
-  // 특정 사용자에게 테스트 알림을 전송하는 엔드포인트
-  @PostMapping("/send/{loginId}")
-  public ResponseEntity<NotificationResponseDto> sendTestNotification(
-      @PathVariable String loginId, @RequestBody NotificationDto notificationDto) {
-    try {
-      NotificationResponseDto responseDto =
-          notificationService.sendNotification(loginId, notificationDto);
-      return ResponseEntity.ok(responseDto);
-    } catch (Exception e) {
-      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-          .body(new NotificationResponseDto());
-    }
-  }
 
-  @CrossOrigin(origins = "*")
+  @Operation(summary = "알림 SSE 요청", description = "알림을 받는 메서드")
   @GetMapping(value = "/notifications", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
   public ResponseEntity<SseEmitter> eventNotify(
       @RequestHeader(value = "Authorization", required = true) String bearerToken,

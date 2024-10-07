@@ -20,6 +20,7 @@ public interface GroupCalendarParticipantRepository
 
   List<GroupCalendarParticipant> findAllByCalendarId(Long calendarId);
 
-  List<GroupCalendarParticipant> findByCalendarId(Long userId);
+  List<GroupCalendarParticipant> findAllByUserId(Long userId);
 
+  List<GroupCalendarParticipant> findByCalendarId(Long id);
 }
