@@ -1,6 +1,7 @@
 package goblin.app.TODO.service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -57,14 +58,30 @@ public class TODOService {
     todoRepository.save(todo);
   }
 
+  @Transactional
   public List<TODOResponseDTO> getPendingTODOs(Long groupId) {
     Group group =
         groupRepository
             .findById(groupId)
-            .orElseThrow(() -> new RuntimeException("Group not found"));
+            .orElseThrow(() -> new RuntimeException("그룹을 찾을 수 없습니다: groupId=" + groupId));
 
-    return todoRepository.findAllByGroupAndCompletedFalse(group).stream()
-        .map(this::convertToDTO)
+    List<TODO> pendingTODOs = todoRepository.findAllByGroupAndCompletedFalse(group);
+
+    return pendingTODOs.stream()
+        .map(
+            todo -> {
+              LocalDateTime createdDateTime = todo.getCreatedDate().atTime(0, 0); // 00:00:00
+              LocalDateTime dueDateTime = todo.getDueDate().atTime(23, 59); // 23:59:00
+
+              return new TODOResponseDTO(
+                  todo.getId(),
+                  todo.getTask(),
+                  createdDateTime,
+                  dueDateTime,
+                  todo.isCompleted(),
+                  calculateDDay(dueDateTime), // D-day 계산
+                  group.getGroupName());
+            })
         .collect(Collectors.toList());
   }
 
@@ -80,13 +97,16 @@ public class TODOService {
   }
 
   private TODOResponseDTO convertToDTO(TODO todo) {
+    LocalDateTime createdDateTime = todo.getCreatedDate().atStartOfDay(); // 00:00:00
+    LocalDateTime dueDateTime = todo.getDueDate().atTime(23, 59); // 23:59:00
+
     return new TODOResponseDTO(
         todo.getId(),
         todo.getTask(),
-        todo.getCreatedDate(),
-        todo.getDueDate(),
+        createdDateTime,
+        dueDateTime,
         todo.isCompleted(),
-        todo.calculateDDay(),
+        calculateDDay(dueDateTime), // D-day 계산
         todo.getGroup().getGroupName());
   }
 
@@ -148,5 +168,10 @@ public class TODOService {
       return claims.getId(); // 토큰에서 loginId 추출
     }
     return null;
+  }
+
+  private int calculateDDay(LocalDateTime dueDateTime) {
+    LocalDateTime now = LocalDateTime.now();
+    return (int) java.time.Duration.between(now, dueDateTime).toDays();
   }
 }

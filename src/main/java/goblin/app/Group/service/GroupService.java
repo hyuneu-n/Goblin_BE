@@ -26,6 +26,7 @@ import goblin.app.Group.model.dto.GroupConfirmedCalendarDTO;
 import goblin.app.Group.model.dto.GroupMemberResponseDTO;
 import goblin.app.Group.model.dto.GroupParticipantResponseDTO;
 import goblin.app.Group.model.dto.GroupResponseDto;
+import goblin.app.Group.model.dto.SelectedDateTimeDTO;
 import goblin.app.Group.model.dto.TimeRange;
 import goblin.app.Group.model.dto.TimeSlot;
 import goblin.app.Group.model.entity.AvailableTime;
@@ -263,24 +264,36 @@ public class GroupService {
 
     return calendars.stream()
         .map(
-            calendar ->
-                GroupCalendarResponseDTO.builder()
-                    .id(calendar.getId())
-                    .groupName(calendar.getGroup().getGroupName())
-                    .title(calendar.getTitle())
-                    .selectedDates(
-                        calendar.getSelectedDates().stream()
-                            .map(LocalDate::toString)
-                            .collect(Collectors.toList()))
-                    .time(calendar.getTime())
-                    .place(calendar.getPlace())
-                    .link(calendar.getLink())
-                    .note(calendar.getNote())
-                    .confirmed(calendar.isConfirmed())
-                    .createdBy(calendar.getCreatedBy().getUsername()) // 주최자 username 반환
-                    .startTime(calendar.getStartTime())
-                    .endTime(calendar.getEndTime())
-                    .build())
+            calendar -> {
+              // 각 날짜에 대한 startDateTime과 endDateTime 생성
+              List<SelectedDateTimeDTO> selectedDateTimes =
+                  calendar.getSelectedDates().stream()
+                      .map(
+                          date ->
+                              SelectedDateTimeDTO.builder()
+                                  .startDateTime(
+                                      date.atTime(calendar.getStartTime())) // startTime과 날짜 결합
+                                  .endDateTime(date.atTime(calendar.getEndTime())) // endTime과 날짜 결합
+                                  .build())
+                      .collect(Collectors.toList());
+
+              return GroupCalendarResponseDTO.builder()
+                  .id(calendar.getId())
+                  .groupName(calendar.getGroup().getGroupName())
+                  .title(calendar.getTitle())
+                  .selectedDates(
+                      calendar.getSelectedDates().stream()
+                          .map(LocalDate::toString)
+                          .collect(Collectors.toList()))
+                  .time(calendar.getTime())
+                  .place(calendar.getPlace())
+                  .link(calendar.getLink())
+                  .note(calendar.getNote())
+                  .confirmed(calendar.isConfirmed())
+                  .createdBy(calendar.getCreatedBy().getUsername()) // 주최자 username 반환
+                  .selectedDateTimes(selectedDateTimes) // startDateTime과 endDateTime 반환
+                  .build();
+            })
         .collect(Collectors.toList());
   }
 
@@ -527,15 +540,21 @@ public class GroupService {
 
     log.info("선택한 OptimalTimeSlot 조회 성공: {}", optimalSlot);
 
-    // 선택한 시간 범위가 유효한지 확인 (startTime, endTime 변환 필요)
+    LocalDate requestDate = request.getDate(); // 요청에서 가져온 날짜
+    if (requestDate == null) {
+      log.error("Date is null.");
+      throw new RuntimeException("날짜가 제공되지 않았습니다.");
+    }
+
     LocalDateTime selectedStartTime =
         LocalDateTime.of(
-            request.getDate(),
+            requestDate, // null 체크를 완료한 requestDate 사용
             convertToLocalTime(
                 request.getStartAmPm(), request.getStartHour(), request.getStartMinute()));
+
     LocalDateTime selectedEndTime =
         LocalDateTime.of(
-            request.getDate(),
+            requestDate, // 동일하게 null 체크된 requestDate 사용
             convertToLocalTime(request.getEndAmPm(), request.getEndHour(), request.getEndMinute()));
 
     if (selectedStartTime.isBefore(optimalSlot.getStartTime())
@@ -560,53 +579,24 @@ public class GroupService {
 
     groupCalendarRepository.save(groupCalendar);
     log.info("그룹 캘린더 저장 성공. calendarId: {}", calendarId);
+
+    // 개인 캘린더에 일정 저장 로직
+    saveToUserCalendar(
+        groupCalendar,
+        loginId,
+        request.getStartAmPm(),
+        request.getStartHour(),
+        request.getStartMinute(),
+        request.getEndAmPm(),
+        request.getEndHour(),
+        request.getEndMinute(),
+        request.getDate());
+    log.info("개인 캘린더에 일정 저장 성공: loginId = {}, calendarId = {}", loginId, calendarId);
   }
 
   private boolean isOverlapping(TimeSlot slot1, TimeSlot slot2) {
     return slot1.getStartTime().isBefore(slot2.getEndTime())
         && slot1.getEndTime().isAfter(slot2.getStartTime());
-  }
-
-  // 일정 확정 메서드 수정 (개인 캘린더 저장 추가)
-  public void confirmCalendarEvent(Long calendarId, Long selectedTimeSlotId, String loginId) {
-    // 최적 시간 계산 및 저장 메서드로 변경
-    List<TimeSlot> optimalTimeSlots = calculateOptimalTimesAndSave(calendarId);
-    TimeSlot selectedTimeSlot =
-        optimalTimeSlots.stream()
-            .filter(slot -> slot.getId().equals(selectedTimeSlotId))
-            .findFirst()
-            .orElseThrow(() -> new RuntimeException("선택한 시간 슬롯을 찾을 수 없습니다."));
-
-    GroupCalendar calendar =
-        groupCalendarRepository
-            .findById(calendarId)
-            .orElseThrow(() -> new RuntimeException("일정을 찾을 수 없습니다: calendarId=" + calendarId));
-
-    // 주최자 권한 확인
-    validateEventOwner(calendar, loginId);
-
-    // 일정 확정
-    calendar.setStartTime(selectedTimeSlot.getStartTime().toLocalTime());
-    calendar.setEndTime(selectedTimeSlot.getEndTime().toLocalTime());
-    calendar.setConfirmed(true);
-
-    // TimeSlot에서 LocalDateTime을 AM/PM 형식으로 변환
-    int startHour = selectedTimeSlot.getStartTime().getHour();
-    int startMinute = selectedTimeSlot.getStartTime().getMinute();
-    String amPmStart = (startHour >= 12) ? "PM" : "AM";
-    if (startHour > 12) startHour -= 12;
-
-    int endHour = selectedTimeSlot.getEndTime().getHour();
-    int endMinute = selectedTimeSlot.getEndTime().getMinute();
-    String amPmEnd = (endHour >= 12) ? "PM" : "AM";
-    if (endHour > 12) endHour -= 12;
-
-    // 개인 캘린더에 일정 저장
-    saveToUserCalendar(
-        calendar, loginId, amPmStart, startHour, startMinute, amPmEnd, endHour, endMinute);
-
-    groupCalendarRepository.save(calendar);
-    log.info("일정이 확정되었습니다: calendarId = {}", calendarId);
   }
 
   private void saveToUserCalendar(
@@ -617,7 +607,8 @@ public class GroupService {
       int startMinute,
       String amPmEnd,
       int endHour,
-      int endMinute) {
+      int endMinute,
+      LocalDate eventDate) {
 
     User user =
         userRepository
@@ -630,6 +621,7 @@ public class GroupService {
             .builder()
             .title(calendar.getTitle())
             .note(calendar.getNote())
+            .date(eventDate)
             .amPmStart(amPmStart)
             .startHour(startHour)
             .startMinute(startMinute)
@@ -645,25 +637,26 @@ public class GroupService {
 
   // 확정일정 조회
   public GroupConfirmedCalendarDTO getConfirmedCalendar(Long groupId, Long calendarId) {
-    // 먼저 groupId로 Group 객체를 조회합니다.
+    // 먼저 groupId로 Group 객체를 조회
     Group group =
         groupRepository
             .findById(groupId)
             .orElseThrow(() -> new RuntimeException("그룹을 찾을 수 없습니다: groupId=" + groupId));
 
-    // 조회한 Group 객체와 함께 일정 정보를 조회합니다.
+    // 조회한 Group 객체와 함께 일정 정보를 조회
     GroupCalendar calendar =
         groupCalendarRepository
             .findByIdAndGroupAndConfirmed(calendarId, group, true) // 확정된 일정만 조회
             .orElseThrow(() -> new RuntimeException("확정된 일정을 찾을 수 없습니다: calendarId=" + calendarId));
 
+    // 확정된 일정의 날짜 정보를 가져오기
+    LocalDate confirmedDate = calendar.getSelectedDates().get(0); // 첫 번째 날짜 사용
+    LocalDateTime startDateTime = confirmedDate.atTime(calendar.getStartTime());
+    LocalDateTime endDateTime = confirmedDate.atTime(calendar.getEndTime());
+
     // GroupConfirmedCalendarDTO로 변환하여 반환
     return new GroupConfirmedCalendarDTO(
-        calendar.getStartTime(),
-        calendar.getEndTime(),
-        calendar.getTitle(),
-        calendar.getPlace(),
-        calendar.getNote());
+        startDateTime, endDateTime, calendar.getTitle(), calendar.getPlace(), calendar.getNote());
   }
 
   // 그룹 멤버 리스트 조회 메서드
