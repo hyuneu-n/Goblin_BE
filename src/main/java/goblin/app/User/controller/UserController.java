@@ -1,6 +1,7 @@
 package goblin.app.User.controller;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,7 @@ import goblin.app.User.model.dto.RefreshTokenRequest;
 import goblin.app.User.model.dto.UserLoginRequest;
 import goblin.app.User.model.dto.UserRegistrationRequest;
 import goblin.app.User.model.dto.UserRegistrationResponseDTO;
+import goblin.app.User.model.dto.UserSearchResponseDTO;
 import goblin.app.User.model.entity.User;
 import goblin.app.User.service.UserService;
 import goblin.app.User.util.JwtUtil;
@@ -144,5 +146,34 @@ public class UserController {
         CustomValidationException ex) {
       return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getErrors());
     }
+  }
+
+  // 로그인 아이디로 서비스에 가입된 모든 사용자 검색
+  @Operation(summary = "로그인 아이디로 유저 검색", description = "로그인 아이디로 유저 검색")
+  @GetMapping("/search")
+  public ResponseEntity<List<UserSearchResponseDTO>> searchUsersByLoginId(
+      @RequestParam String loginId,
+      @RequestHeader(value = "Authorization", required = true) String bearerToken) {
+
+    // 헤더에서 토큰에서 loginId 추출
+    String requesterLoginId = extractLoginId(bearerToken);
+
+    // 추출된 로그인 아이디로 인증된 사용자인지 확인할 수 있는 로직을 추가
+    if (requesterLoginId == null) {
+      return ResponseEntity.status(403).body(null);
+    }
+
+    // 로그인 아이디로 사용자를 검색
+    List<UserSearchResponseDTO> users = userService.searchUsersByLoginId(loginId);
+    return ResponseEntity.ok(users);
+  }
+  // JWT 토큰에서 loginId 추출하는 메서드
+  private String extractLoginId(String bearerToken) {
+    if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
+      String token = bearerToken.substring(7);
+      Claims claims = jwtUtil.getAllClaimsFromToken(token);
+      return claims.getId(); // 토큰에서 loginId 추출
+    }
+    return null;
   }
 }
