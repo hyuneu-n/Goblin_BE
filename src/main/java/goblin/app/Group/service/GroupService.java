@@ -705,4 +705,20 @@ public class GroupService {
       throw new RuntimeException("해당 일정의 주최자가 아닙니다.");
     }
   }
+
+  @Transactional
+  public List<TimeSlot> getAvailableTimesForCalendar(Long calendarId) {
+    List<AvailableTime> availableTimes = availableTimeRepository.findAllByCalendarId(calendarId);
+
+    return availableTimes.stream()
+        .map(
+            availableTime ->
+                TimeSlot.builder()
+                    .id(availableTime.getId())
+                    .startTime(availableTime.getStartTime())
+                    .endTime(availableTime.getEndTime())
+                    .participants(List.of(availableTime.getUser().getLoginId())) // 참가자 loginId 반환
+                    .build())
+        .collect(Collectors.toList());
+  }
 }

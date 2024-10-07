@@ -402,4 +402,22 @@ public class GroupController {
 
     return ResponseEntity.ok(participants);
   }
+
+  @Operation(summary = "참가자의 가능한 시간 조회", description = "참가자가 제출한 가능한 시간을 조회")
+  @GetMapping("/{groupId}/calendar/{calendarId}/available-times")
+  public ResponseEntity<List<TimeSlot>> getAvailableTimes(
+      @PathVariable Long groupId,
+      @PathVariable Long calendarId,
+      @RequestHeader(value = "Authorization", required = true) String bearerToken) {
+
+    String loginId = extractLoginId(bearerToken);
+
+    // 그룹에 속해 있는지 확인
+    if (!groupService.isUserInGroup(groupId, loginId)) {
+      return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
+    }
+
+    List<TimeSlot> availableTimes = groupService.getAvailableTimesForCalendar(calendarId);
+    return ResponseEntity.ok(availableTimes);
+  }
 }
