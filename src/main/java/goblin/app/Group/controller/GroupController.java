@@ -342,7 +342,7 @@ public class GroupController {
     }
 
     // 그룹 멤버 리스트 가져오기
-    List<GroupMemberResponseDTO> members = groupService.getGroupMembers(groupId);
+    List<GroupMemberResponseDTO> members = groupService.getGroupMembersWithRoles(groupId);
     return ResponseEntity.ok(members);
   }
 

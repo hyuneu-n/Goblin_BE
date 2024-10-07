@@ -660,13 +660,18 @@ public class GroupService {
   }
 
   // 그룹 멤버 리스트 조회 메서드
-  public List<GroupMemberResponseDTO> getGroupMembers(Long groupId) {
-    List<GroupMember> members = groupMemberRepository.findByGroupId(groupId);
-    return members.stream()
+  @Transactional
+  public List<GroupMemberResponseDTO> getGroupMembersWithRoles(Long groupId) {
+    List<GroupMember> groupMembers = groupMemberRepository.findByGroupId(groupId);
+
+    return groupMembers.stream()
         .map(
             member ->
                 new GroupMemberResponseDTO(
-                    member.getUser().getUsername(), member.getUser().getLoginId()))
+                    member.getUser().getUsername(),
+                    member.getUser().getLoginId(),
+                    member.getRole() // 역할 추가
+                    ))
         .collect(Collectors.toList());
   }
 
