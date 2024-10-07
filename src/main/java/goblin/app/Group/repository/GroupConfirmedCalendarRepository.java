@@ -1,6 +1,7 @@
 package goblin.app.Group.repository;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -11,4 +12,6 @@ public interface GroupConfirmedCalendarRepository
   List<GroupConfirmedCalendar> findAllByGroupId(Long groupId);
 
   List<GroupConfirmedCalendar> findByGroupIdAndCalendarId(Long groupId, Long calendarId);
+
+  Optional<GroupConfirmedCalendar> findByCalendarId(Long calendarId);
 }
