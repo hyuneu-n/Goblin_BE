@@ -10,5 +10,6 @@ import goblin.app.Group.model.entity.AvailableTime;
 @Repository
 public interface AvailableTimeRepository extends JpaRepository<AvailableTime, Long> {
   List<AvailableTime> findByCalendarId(Long calendarId);
+
   List<AvailableTime> findAllByCalendarId(Long calendarId);
 }
