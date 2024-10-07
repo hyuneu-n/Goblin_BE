@@ -4,6 +4,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Service;
 
 import goblin.app.Common.exception.CustomValidationException;
 import goblin.app.User.model.dto.UserRegistrationResponseDTO;
+import goblin.app.User.model.dto.UserSearchResponseDTO;
 import goblin.app.User.model.entity.User;
 import goblin.app.User.repository.UserRepository;
 import goblin.app.User.util.JwtUtil;
@@ -136,5 +138,13 @@ public class UserService implements UserDetailsService {
   public String getUserRoleByLoginId(String loginId) {
     User user = findUserByLoginId(loginId);
     return user.getUserRole(); // 역할 정보 반환
+  }
+
+  // 로그인 아이디로 사용자를 검색하는 메서드
+  public List<UserSearchResponseDTO> searchUsersByLoginId(String loginId) {
+    List<User> users = userRepository.findByLoginIdContaining(loginId);
+    return users.stream()
+        .map(user -> new UserSearchResponseDTO(user.getLoginId(), user.getUsername()))
+        .collect(Collectors.toList());
   }
 }
