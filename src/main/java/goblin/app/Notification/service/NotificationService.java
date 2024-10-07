@@ -143,7 +143,9 @@ public class NotificationService {
         emitter.completeWithError(e);
       }
     } else {
-      log.warn("No emitter found for user ID: {}. Notification will be queued.", userId); // 큐에 저장하도록 추후 수정
+      log.warn(
+          "No emitter found for user ID: {}. Notification will be queued.",
+          userId); // 큐에 저장하도록 추후 수정
     }
     return responseDto;
   }
