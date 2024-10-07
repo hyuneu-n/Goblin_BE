@@ -527,15 +527,21 @@ public class GroupService {
 
     log.info("선택한 OptimalTimeSlot 조회 성공: {}", optimalSlot);
 
-    // 선택한 시간 범위가 유효한지 확인 (startTime, endTime 변환 필요)
+    LocalDate requestDate = request.getDate(); // 요청에서 가져온 날짜
+    if (requestDate == null) {
+      log.error("Date is null.");
+      throw new RuntimeException("날짜가 제공되지 않았습니다.");
+    }
+
     LocalDateTime selectedStartTime =
         LocalDateTime.of(
-            request.getDate(),
+            requestDate, // null 체크를 완료한 requestDate 사용
             convertToLocalTime(
                 request.getStartAmPm(), request.getStartHour(), request.getStartMinute()));
+
     LocalDateTime selectedEndTime =
         LocalDateTime.of(
-            request.getDate(),
+            requestDate, // 동일하게 null 체크된 requestDate 사용
             convertToLocalTime(request.getEndAmPm(), request.getEndHour(), request.getEndMinute()));
 
     if (selectedStartTime.isBefore(optimalSlot.getStartTime())
@@ -560,53 +566,24 @@ public class GroupService {
 
     groupCalendarRepository.save(groupCalendar);
     log.info("그룹 캘린더 저장 성공. calendarId: {}", calendarId);
+
+    // 개인 캘린더에 일정 저장 로직
+    saveToUserCalendar(
+        groupCalendar,
+        loginId,
+        request.getStartAmPm(),
+        request.getStartHour(),
+        request.getStartMinute(),
+        request.getEndAmPm(),
+        request.getEndHour(),
+        request.getEndMinute(),
+        request.getDate());
+    log.info("개인 캘린더에 일정 저장 성공: loginId = {}, calendarId = {}", loginId, calendarId);
   }
 
   private boolean isOverlapping(TimeSlot slot1, TimeSlot slot2) {
     return slot1.getStartTime().isBefore(slot2.getEndTime())
         && slot1.getEndTime().isAfter(slot2.getStartTime());
-  }
-
-  // 일정 확정 메서드 수정 (개인 캘린더 저장 추가)
-  public void confirmCalendarEvent(Long calendarId, Long selectedTimeSlotId, String loginId) {
-    // 최적 시간 계산 및 저장 메서드로 변경
-    List<TimeSlot> optimalTimeSlots = calculateOptimalTimesAndSave(calendarId);
-    TimeSlot selectedTimeSlot =
-        optimalTimeSlots.stream()
-            .filter(slot -> slot.getId().equals(selectedTimeSlotId))
-            .findFirst()
-            .orElseThrow(() -> new RuntimeException("선택한 시간 슬롯을 찾을 수 없습니다."));
-
-    GroupCalendar calendar =
-        groupCalendarRepository
-            .findById(calendarId)
-            .orElseThrow(() -> new RuntimeException("일정을 찾을 수 없습니다: calendarId=" + calendarId));
-
-    // 주최자 권한 확인
-    validateEventOwner(calendar, loginId);
-
-    // 일정 확정
-    calendar.setStartTime(selectedTimeSlot.getStartTime().toLocalTime());
-    calendar.setEndTime(selectedTimeSlot.getEndTime().toLocalTime());
-    calendar.setConfirmed(true);
-
-    // TimeSlot에서 LocalDateTime을 AM/PM 형식으로 변환
-    int startHour = selectedTimeSlot.getStartTime().getHour();
-    int startMinute = selectedTimeSlot.getStartTime().getMinute();
-    String amPmStart = (startHour >= 12) ? "PM" : "AM";
-    if (startHour > 12) startHour -= 12;
-
-    int endHour = selectedTimeSlot.getEndTime().getHour();
-    int endMinute = selectedTimeSlot.getEndTime().getMinute();
-    String amPmEnd = (endHour >= 12) ? "PM" : "AM";
-    if (endHour > 12) endHour -= 12;
-
-    // 개인 캘린더에 일정 저장
-    saveToUserCalendar(
-        calendar, loginId, amPmStart, startHour, startMinute, amPmEnd, endHour, endMinute);
-
-    groupCalendarRepository.save(calendar);
-    log.info("일정이 확정되었습니다: calendarId = {}", calendarId);
   }
 
   private void saveToUserCalendar(
@@ -617,7 +594,8 @@ public class GroupService {
       int startMinute,
       String amPmEnd,
       int endHour,
-      int endMinute) {
+      int endMinute,
+      LocalDate eventDate) {
 
     User user =
         userRepository
@@ -630,6 +608,7 @@ public class GroupService {
             .builder()
             .title(calendar.getTitle())
             .note(calendar.getNote())
+            .date(eventDate)
             .amPmStart(amPmStart)
             .startHour(startHour)
             .startMinute(startMinute)
