@@ -16,8 +16,6 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import goblin.app.Group.model.dto.*;
 import goblin.app.Group.service.GroupService;
 import goblin.app.Group.service.InviteTokenService;
-import goblin.app.Notification.model.dto.NotificationDto;
-import goblin.app.Notification.model.dto.NotificationResponseDto;
 import goblin.app.Notification.model.entity.EmitterRepository;
 import goblin.app.Notification.service.NotificationService;
 import goblin.app.User.model.entity.User;
@@ -146,7 +144,6 @@ public class GroupController {
       return ResponseEntity.badRequest().body(e.getMessage());
     }
   }
-
 
   @Operation(summary = "확정된 일정 조회", description = "확정된 일정을 조회")
   @GetMapping("/{groupId}/calendar/{calendarId}/confirmed")
@@ -317,8 +314,6 @@ public class GroupController {
 
     groupService.setAvailableTime(calendarId, request, loginId);
 
-
-
     return ResponseEntity.ok("가능한 시간이 제출되었습니다.");
   }
 
@@ -442,7 +437,6 @@ public class GroupController {
     List<TimeSlot> availableTimes = groupService.getAvailableTimesForCalendar(calendarId);
     return ResponseEntity.ok(availableTimes);
   }
-
 
   @Operation(summary = "알림 SSE 요청", description = "알림을 받는 메서드")
   @GetMapping(value = "/notifications", produces = MediaType.TEXT_EVENT_STREAM_VALUE)

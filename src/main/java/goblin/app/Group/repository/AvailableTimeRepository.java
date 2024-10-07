@@ -1,7 +1,6 @@
 package goblin.app.Group.repository;
 
 import java.util.List;
-import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -17,5 +16,4 @@ public interface AvailableTimeRepository extends JpaRepository<AvailableTime, Lo
 
   @Query("SELECT COUNT(DISTINCT a.user) FROM AvailableTime a WHERE a.calendarId = :calendarId")
   Long countDistinctUsersByCalendarId(Long calendarId);
-
 }

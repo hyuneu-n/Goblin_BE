@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import goblin.app.Notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -42,6 +41,7 @@ import goblin.app.Group.repository.GroupCalendarRepository;
 import goblin.app.Group.repository.GroupMemberRepository;
 import goblin.app.Group.repository.GroupRepository;
 import goblin.app.Group.repository.OptimalTimeSlotRepository;
+import goblin.app.Notification.service.NotificationService;
 import goblin.app.User.model.entity.User;
 import goblin.app.User.repository.UserRepository;
 
@@ -387,16 +387,16 @@ public class GroupService {
   @Transactional
   public void setAvailableTime(Long calendarId, AvailableTimeRequestDTO request, String loginId) {
     User user =
-            userRepository
-                    .findByLoginId(loginId)
-                    .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다: loginId = " + loginId));
+        userRepository
+            .findByLoginId(loginId)
+            .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다: loginId = " + loginId));
 
     for (AvailableTimeSlot slot : request.getAvailableTimeSlots()) {
       // 시간 변환 로직 생략
       LocalTime startTime =
-              convertToLocalTime(slot.getStartAmPm(), slot.getStartHour(), slot.getStartMinute());
+          convertToLocalTime(slot.getStartAmPm(), slot.getStartHour(), slot.getStartMinute());
       LocalTime endTime =
-              convertToLocalTime(slot.getEndAmPm(), slot.getEndHour(), slot.getEndMinute());
+          convertToLocalTime(slot.getEndAmPm(), slot.getEndHour(), slot.getEndMinute());
 
       LocalDateTime startDateTime = LocalDateTime.of(slot.getDate(), startTime);
       LocalDateTime endDateTime = LocalDateTime.of(slot.getDate(), endTime);
@@ -408,12 +408,12 @@ public class GroupService {
       availableTime.setStartTime(startDateTime);
       availableTime.setEndTime(endDateTime);
       availableTimeRepository.save(availableTime);
-      if(haveAllUsersSubmittedAvailableTime(calendarId) ){
+      if (haveAllUsersSubmittedAvailableTime(calendarId)) {
         notificationService.eventSelectedNotify(calendarId);
       }
 
       log.info("참여자의 가능 시간 등록 완료: calendarId = {}, userId = {}", calendarId, user.getId());
-      }
+    }
 
     // 제출 상태 업데이트
     GroupCalendarParticipant participant =
@@ -426,13 +426,15 @@ public class GroupService {
     log.info("참여자의 가능 시간 제출 완료 상태 업데이트: calendarId = {}, userId = {}", calendarId, user.getId());
   }
 
-
-
   // 모든 사용자가 가능 시간을 제출했는지 여부 확인
   public boolean haveAllUsersSubmittedAvailableTime(Long calendarId) {
-    long totalUsers = groupCalendarRepository.countUsersByCalendarId(calendarId);
+    long totalUsers = groupCalendarParticipantRepository.countUsersByCalendarId(calendarId);
     long userCount = availableTimeRepository.countDistinctUsersByCalendarId(calendarId);
-    log.info("제출된 가능 시간을 제출한 사용자 수: calendarId = {}, userCount = {}, totalUsers = {}", calendarId, userCount, totalUsers);
+    log.info(
+        "제출된 가능 시간을 제출한 사용자 수: calendarId = {}, userCount = {}, totalUsers = {}",
+        calendarId,
+        userCount,
+        totalUsers);
     return userCount >= totalUsers;
   }
 
@@ -729,6 +731,7 @@ public class GroupService {
       throw new RuntimeException("해당 일정의 주최자가 아닙니다.");
     }
   }
+
   @Transactional
   public List<TimeSlot> getAvailableTimesForCalendar(Long calendarId) {
     List<AvailableTime> availableTimes = availableTimeRepository.findAllByCalendarId(calendarId);
