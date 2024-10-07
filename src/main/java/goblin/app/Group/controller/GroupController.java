@@ -131,24 +131,6 @@ public class GroupController {
     }
   }
 
-  // 일정 확정
-  @Operation(summary = "일정 확정", description = "후보 시간들 중 일정 확정")
-  @PostMapping("/{groupId}/calendar/{calendarId}/confirm")
-  public ResponseEntity<?> confirmCalendarEvent(
-      @PathVariable Long groupId,
-      @PathVariable Long calendarId,
-      @RequestBody Long selectedTimeSlotId,
-      @RequestHeader(value = "Authorization", required = true) String bearerToken) {
-    try {
-      String loginId = extractLoginId(bearerToken);
-      groupService.confirmCalendarEvent(calendarId, selectedTimeSlotId, loginId);
-      return ResponseEntity.ok("일정이 확정되었습니다.");
-    } catch (RuntimeException e) {
-      log.error("일정 확정 실패: {}", e.getMessage());
-      return ResponseEntity.badRequest().body(e.getMessage());
-    }
-  }
-
   @Operation(summary = "확정된 일정 조회", description = "확정된 일정을 조회")
   @GetMapping("/{groupId}/calendar/{calendarId}/confirmed")
   public ResponseEntity<?> getConfirmedCalendar(
@@ -173,7 +155,7 @@ public class GroupController {
   @Operation(
       summary = "일정 최종 확정",
       description = "가장 적합한 시간들을 계산한 후 그 리스트들 중에서 하나를 선택하고, 그 범위 내에서 시간을 완전히 확정")
-  @PostMapping("/{groupId}/calendar/{calendarId}/confirm-range")
+  @PostMapping("/{groupId}/calendar/{calendarId}/confirm")
   public ResponseEntity<?> confirmCustomTimeInRange(
       @PathVariable Long groupId,
       @PathVariable Long calendarId,
