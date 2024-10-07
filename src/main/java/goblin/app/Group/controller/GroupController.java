@@ -5,13 +5,23 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import jakarta.servlet.http.HttpServletResponse;
+
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import goblin.app.Group.model.dto.*;
 import goblin.app.Group.service.GroupService;
 import goblin.app.Group.service.InviteTokenService;
+import goblin.app.Notification.model.dto.NotificationDto;
+import goblin.app.Notification.model.dto.NotificationResponseDto;
+import goblin.app.Notification.model.entity.EmitterRepository;
+import goblin.app.Notification.service.NotificationService;
+import goblin.app.User.model.entity.User;
+import goblin.app.User.repository.UserRepository;
 import goblin.app.User.util.JwtUtil;
 import io.jsonwebtoken.Claims;
 import io.swagger.v3.oas.annotations.Operation;
@@ -27,6 +37,12 @@ public class GroupController {
   private final GroupService groupService;
   private final JwtUtil jwtUtil;
   private final InviteTokenService inviteTokenService;
+
+  private final NotificationService notificationService;
+
+  private final UserRepository userRepository;
+
+  private final EmitterRepository emitterRepository;
 
   // 그룹 생성
   @Operation(summary = "그룹 생성", description = "새로운 그룹을 생성하고 그룹장을 자동으로 설정")
@@ -127,6 +143,30 @@ public class GroupController {
       return ResponseEntity.ok("메모가 추가되었습니다.");
     } catch (RuntimeException e) {
       log.error("메모 추가 실패: {}", e.getMessage());
+      return ResponseEntity.badRequest().body(e.getMessage());
+    }
+  }
+
+
+  // 일정 확정
+  @PostMapping("/{groupId}/calendar/{calendarId}/confirm")
+  public ResponseEntity<?> confirmCalendarEvent(
+      @PathVariable Long groupId,
+      @PathVariable Long calendarId,
+      @RequestBody Long selectedTimeSlotId,
+      @RequestHeader(value = "Last-Event-ID", required = false, defaultValue = "")
+          String lastEventId, // SSE 이벤트 ID
+      @RequestHeader(value = "Authorization", required = true) String bearerToken) {
+    try {
+      String loginId = extractLoginId(bearerToken);
+
+      // 알림
+      // notificationService.eventNotify(loginId, lastEventId);
+      notificationService.eventFixedNotify(calendarId);
+
+      return ResponseEntity.ok("일정이 확정되었습니다.");
+    } catch (RuntimeException e) {
+      log.error("일정 확정 실패: {}", e.getMessage());
       return ResponseEntity.badRequest().body(e.getMessage());
     }
   }
@@ -419,5 +459,46 @@ public class GroupController {
 
     List<TimeSlot> availableTimes = groupService.getAvailableTimesForCalendar(calendarId);
     return ResponseEntity.ok(availableTimes);
+  }
+
+  // 특정 사용자에게 테스트 알림을 전송하는 엔드포인트
+  @PostMapping("/send/{loginId}")
+  public ResponseEntity<NotificationResponseDto> sendTestNotification(
+      @PathVariable String loginId, @RequestBody NotificationDto notificationDto) {
+    try {
+      NotificationResponseDto responseDto =
+          notificationService.sendNotification(loginId, notificationDto);
+      return ResponseEntity.ok(responseDto);
+    } catch (Exception e) {
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+          .body(new NotificationResponseDto());
+    }
+  }
+
+  @CrossOrigin(origins = "*")
+  @GetMapping(value = "/notifications", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+  public ResponseEntity<SseEmitter> eventNotify(
+      @RequestHeader(value = "Authorization", required = true) String bearerToken,
+      HttpServletResponse response) {
+
+    String loginId = extractLoginId(bearerToken);
+    User user =
+        userRepository
+            .findByLoginId(loginId)
+            .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다."));
+
+    // 기존 Emitter가 있을 경우 제거
+    SseEmitter existingEmitter = emitterRepository.get(user.getId());
+    if (existingEmitter != null) {
+      existingEmitter.complete();
+      emitterRepository.deleteById(user.getId());
+    }
+
+    // X-Accel-Buffering 헤더 추가
+    response.setHeader("X-Accel-Buffering", "no");
+
+    // 새로운 SSE Emitter 반환
+    SseEmitter emitter = notificationService.eventN(user.getId());
+    return ResponseEntity.ok(emitter);
   }
 }

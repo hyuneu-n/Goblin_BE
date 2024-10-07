@@ -1,6 +1,7 @@
 package goblin.app.Group.repository;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
@@ -12,4 +13,5 @@ public interface AvailableTimeRepository extends JpaRepository<AvailableTime, Lo
   List<AvailableTime> findByCalendarId(Long calendarId);
 
   List<AvailableTime> findAllByCalendarId(Long calendarId);
+
 }

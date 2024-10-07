@@ -710,7 +710,6 @@ public class GroupService {
       throw new RuntimeException("해당 일정의 주최자가 아닙니다.");
     }
   }
-
   @Transactional
   public List<TimeSlot> getAvailableTimesForCalendar(Long calendarId) {
     List<AvailableTime> availableTimes = availableTimeRepository.findAllByCalendarId(calendarId);
