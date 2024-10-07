@@ -26,6 +26,7 @@ import goblin.app.Group.model.dto.GroupConfirmedCalendarDTO;
 import goblin.app.Group.model.dto.GroupMemberResponseDTO;
 import goblin.app.Group.model.dto.GroupParticipantResponseDTO;
 import goblin.app.Group.model.dto.GroupResponseDto;
+import goblin.app.Group.model.dto.SelectedDateTimeDTO;
 import goblin.app.Group.model.dto.TimeRange;
 import goblin.app.Group.model.dto.TimeSlot;
 import goblin.app.Group.model.entity.AvailableTime;
@@ -263,24 +264,36 @@ public class GroupService {
 
     return calendars.stream()
         .map(
-            calendar ->
-                GroupCalendarResponseDTO.builder()
-                    .id(calendar.getId())
-                    .groupName(calendar.getGroup().getGroupName())
-                    .title(calendar.getTitle())
-                    .selectedDates(
-                        calendar.getSelectedDates().stream()
-                            .map(LocalDate::toString)
-                            .collect(Collectors.toList()))
-                    .time(calendar.getTime())
-                    .place(calendar.getPlace())
-                    .link(calendar.getLink())
-                    .note(calendar.getNote())
-                    .confirmed(calendar.isConfirmed())
-                    .createdBy(calendar.getCreatedBy().getUsername()) // 주최자 username 반환
-                    .startTime(calendar.getStartTime())
-                    .endTime(calendar.getEndTime())
-                    .build())
+            calendar -> {
+              // 각 날짜에 대한 startDateTime과 endDateTime 생성
+              List<SelectedDateTimeDTO> selectedDateTimes =
+                  calendar.getSelectedDates().stream()
+                      .map(
+                          date ->
+                              SelectedDateTimeDTO.builder()
+                                  .startDateTime(
+                                      date.atTime(calendar.getStartTime())) // startTime과 날짜 결합
+                                  .endDateTime(date.atTime(calendar.getEndTime())) // endTime과 날짜 결합
+                                  .build())
+                      .collect(Collectors.toList());
+
+              return GroupCalendarResponseDTO.builder()
+                  .id(calendar.getId())
+                  .groupName(calendar.getGroup().getGroupName())
+                  .title(calendar.getTitle())
+                  .selectedDates(
+                      calendar.getSelectedDates().stream()
+                          .map(LocalDate::toString)
+                          .collect(Collectors.toList()))
+                  .time(calendar.getTime())
+                  .place(calendar.getPlace())
+                  .link(calendar.getLink())
+                  .note(calendar.getNote())
+                  .confirmed(calendar.isConfirmed())
+                  .createdBy(calendar.getCreatedBy().getUsername()) // 주최자 username 반환
+                  .selectedDateTimes(selectedDateTimes) // startDateTime과 endDateTime 반환
+                  .build();
+            })
         .collect(Collectors.toList());
   }
 
@@ -624,25 +637,26 @@ public class GroupService {
 
   // 확정일정 조회
   public GroupConfirmedCalendarDTO getConfirmedCalendar(Long groupId, Long calendarId) {
-    // 먼저 groupId로 Group 객체를 조회합니다.
+    // 먼저 groupId로 Group 객체를 조회
     Group group =
         groupRepository
             .findById(groupId)
             .orElseThrow(() -> new RuntimeException("그룹을 찾을 수 없습니다: groupId=" + groupId));
 
-    // 조회한 Group 객체와 함께 일정 정보를 조회합니다.
+    // 조회한 Group 객체와 함께 일정 정보를 조회
     GroupCalendar calendar =
         groupCalendarRepository
             .findByIdAndGroupAndConfirmed(calendarId, group, true) // 확정된 일정만 조회
             .orElseThrow(() -> new RuntimeException("확정된 일정을 찾을 수 없습니다: calendarId=" + calendarId));
 
+    // 확정된 일정의 날짜 정보를 가져오기
+    LocalDate confirmedDate = calendar.getSelectedDates().get(0); // 첫 번째 날짜 사용
+    LocalDateTime startDateTime = confirmedDate.atTime(calendar.getStartTime());
+    LocalDateTime endDateTime = confirmedDate.atTime(calendar.getEndTime());
+
     // GroupConfirmedCalendarDTO로 변환하여 반환
     return new GroupConfirmedCalendarDTO(
-        calendar.getStartTime(),
-        calendar.getEndTime(),
-        calendar.getTitle(),
-        calendar.getPlace(),
-        calendar.getNote());
+        startDateTime, endDateTime, calendar.getTitle(), calendar.getPlace(), calendar.getNote());
   }
 
   // 그룹 멤버 리스트 조회 메서드

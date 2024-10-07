@@ -1,6 +1,6 @@
 package goblin.app.TODO.model.dto;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -14,8 +14,8 @@ import lombok.Setter;
 public class TODOResponseDTO {
   private Long id;
   private String task;
-  private LocalDate createdDate;
-  private LocalDate dueDate;
+  private LocalDateTime createdDate; // LocalDateTime으로 변경
+  private LocalDateTime dueDate; // LocalDateTime으로 변경
   private boolean completed;
   private int dDay;
   private String groupName;
