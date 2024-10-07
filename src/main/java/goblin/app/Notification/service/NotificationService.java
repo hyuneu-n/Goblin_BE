@@ -236,11 +236,11 @@ public class NotificationService {
 
     // 그룹 캘린더 참가자 목록
     List<GroupCalendarParticipant> participants =
-        groupCalendarParticipantRepository.findByCalendarId(groupEvent.getCalendarId());
+        groupCalendarParticipantRepository.findAllByCalendarId(groupEvent.getCalendarId());
 
     // 각 참가자에게 알림 전송
     for (GroupCalendarParticipant participant : participants) {
-      Long userId = participant.getUserId(); // userId 추출
+      Long userId = participant.getUser().getId(); // userId 추출
       User user =
           userRepository
               .findById(userId)
@@ -302,16 +302,11 @@ public class NotificationService {
 
     // 각 참가자에게 알림 전송
     for (GroupCalendarParticipant participant : participants) {
-      Long userId = participant.getUserId(); // userId 추출
-      User user =
-          userRepository
-              .findById(userId)
-              .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+      User user = participant.getUser();
+      Long userId = user.getId();
       if (user != null) {
         // 알림 생성 및 저장
         Notification notification = notificationRepository.save(dto.ToEntity(user));
-
-        // SseEmitter를 통해 사용자에게 알림 전송
         sendNotification(user.getLoginId(), dto);
       } else {
         log.warn("User not found for ID: {}", userId);
@@ -321,7 +316,6 @@ public class NotificationService {
 
   // 주최자에게 일정 확정 알림, 모든 사용자가 완료하였을 때, 즉 모든 참여자가 일정을 확정했을 때
   public void eventSelectedNotify(Long calendarId) {
-    //    if(groupEvent.isConfirmed() == true) 일때 이 메서드를 실행
     GroupCalendar groupEvent =
         groupCalendarRepository
             .findById(calendarId)
@@ -338,7 +332,6 @@ public class NotificationService {
 
     // 알림 생성 및 저장
     Notification notification = notificationRepository.save(dto.ToEntity(creator));
-
     // SseEmitter를 통해 사용자에게 알림 전송
     sendNotification(creator.getLoginId(), dto);
   }
