@@ -17,7 +17,8 @@ public class FixedScheduleResponseDTO {
   private String scheduleName;
   private String startTime;
   private String endTime;
-  private List<String> dayOfWeek; // 혹은 DayOfWeek 열거형
+  private List<String> dayOfWeek;
+  private boolean isPublic;
 
   public FixedScheduleResponseDTO(FixedSchedule schedule) {
     this.id = schedule.getId();
@@ -26,5 +27,6 @@ public class FixedScheduleResponseDTO {
     this.endTime = schedule.getEndTime().toString();
     this.dayOfWeek =
         schedule.getDayOfWeek().stream().map(DayOfWeek::name).collect(Collectors.toList());
+    this.isPublic = schedule.isPublic();
   }
 }
