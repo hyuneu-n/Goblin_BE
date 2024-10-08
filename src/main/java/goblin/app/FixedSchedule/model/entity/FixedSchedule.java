@@ -8,7 +8,6 @@ import lombok.*;
 
 import jakarta.persistence.*;
 
-import goblin.app.Category.model.entity.Category;
 import goblin.app.User.model.entity.User;
 
 @Entity
@@ -28,10 +27,6 @@ public class FixedSchedule {
   @JoinColumn(name = "user_id")
   private User user;
 
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "category_id")
-  private Category category;
-
   @Column(nullable = false, length = 13)
   private String scheduleName;
 
@@ -49,6 +44,9 @@ public class FixedSchedule {
 
   @Column(nullable = false, length = 6)
   private String color;
+
+  @Column(nullable = false)
+  private boolean isPublic;
 
   public void updateTime(LocalTime startTime, LocalTime endTime) {
     this.startTime = startTime;

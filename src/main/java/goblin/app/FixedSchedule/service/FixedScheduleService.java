@@ -1,6 +1,5 @@
 package goblin.app.FixedSchedule.service;
 
-import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -10,10 +9,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import goblin.app.Category.model.entity.Category;
-import goblin.app.Category.model.entity.CategoryRepository;
-import goblin.app.Common.exception.CustomException;
-import goblin.app.Common.exception.ErrorCode;
 import goblin.app.FixedSchedule.model.dto.FixedScheduleRequestDTO;
 import goblin.app.FixedSchedule.model.dto.FixedScheduleResponseDTO;
 import goblin.app.FixedSchedule.model.entity.FixedSchedule;
@@ -26,22 +21,11 @@ import goblin.app.User.repository.UserRepository;
 public class FixedScheduleService {
 
   private final FixedScheduleRepository fixedScheduleRepository;
-  private final CategoryRepository categoryRepository;
   private final UserRepository userRepository;
 
   @Transactional
   public FixedScheduleResponseDTO createFixedSchedule(
       FixedScheduleRequestDTO requestDto, User user) {
-    // 카테고리 조회
-    Category category =
-        categoryRepository
-            .findById(requestDto.getCategoryId())
-            .orElseThrow(() -> new CustomException(ErrorCode.CATEGORY_NOT_FOUND));
-
-    // 삭제된 카테고리 예외 처리
-    if (category.getDeleted()) {
-      throw new CustomException(ErrorCode.CATEGORY_DELETED);
-    }
 
     // 고정 일정 생성
     FixedSchedule fixedSchedule =
@@ -57,20 +41,12 @@ public class FixedScheduleService {
                     requestDto.getAmPmEnd(), requestDto.getEndHour(), requestDto.getEndMinute()))
             .dayOfWeek(requestDto.getDayOfWeek())
             .user(user)
-            .color(category.getColor()) // 카테고리 색상 가져오기
+            .color(resolveColorCode(requestDto.getColorCode())) // 사용자가 선택한 색상 설정
+            .isPublic(requestDto.isPublic()) // 공개 여부 설정
             .build();
 
     fixedScheduleRepository.save(fixedSchedule);
     return new FixedScheduleResponseDTO(fixedSchedule);
-  }
-
-  private LocalDateTime convertToLocalDateTime(String amPm, int hour, int minute) {
-    if ("PM".equalsIgnoreCase(amPm) && hour < 12) {
-      hour += 12;
-    } else if ("AM".equalsIgnoreCase(amPm) && hour == 12) {
-      hour = 0;
-    }
-    return LocalDateTime.now().withHour(hour).withMinute(minute).withSecond(0).withNano(0);
   }
 
   @Transactional(readOnly = true)
@@ -103,11 +79,15 @@ public class FixedScheduleService {
             updateRequest.getAmPmEnd(), updateRequest.getEndHour(), updateRequest.getEndMinute());
 
     // 요일 리스트와 시간 업데이트
-    schedule.setDayOfWeek(updateRequest.getDayOfWeek()); // 리스트로 설정
+    schedule.setScheduleName(updateRequest.getScheduleName());
+    schedule.setDayOfWeek(updateRequest.getDayOfWeek());
     schedule.updateTime(startTime, endTime);
+    schedule.setColor(resolveColorCode(updateRequest.getColorCode())); // 색상 변경 가능
+    schedule.setPublic(updateRequest.isPublic()); // 공개 여부 업데이트
+
+    fixedScheduleRepository.save(schedule);
   }
 
-  // AM/PM 시간 변환 메서드
   private LocalTime convertToLocalTime(String amPm, int hour, int minute) {
     if ("PM".equalsIgnoreCase(amPm) && hour < 12) {
       hour += 12;
@@ -117,7 +97,6 @@ public class FixedScheduleService {
     return LocalTime.of(hour, minute);
   }
 
-  // 색상 코드 번호에 따라 미리 지정된 색상 값을 반환하는 메서드
   private String resolveColorCode(int colorCode) {
     switch (colorCode) {
       case 1:
@@ -137,24 +116,20 @@ public class FixedScheduleService {
 
   @Transactional
   public void deleteFixedSchedule(Long scheduleId, String loginId) {
-    // 로그인한 사용자를 가져옴
     User user =
         userRepository
             .findByLoginId(loginId)
             .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다: loginId=" + loginId));
 
-    // 삭제할 고정 일정을 찾음
     FixedSchedule schedule =
         fixedScheduleRepository
             .findById(scheduleId)
             .orElseThrow(() -> new RuntimeException("고정 일정을 찾을 수 없습니다: scheduleId=" + scheduleId));
 
-    // 일정 소유자가 현재 로그인한 사용자인지 확인
     if (!schedule.getUser().getId().equals(user.getId())) {
       throw new RuntimeException("해당 고정 일정을 삭제할 권한이 없습니다.");
     }
 
-    // 고정 일정 삭제
     fixedScheduleRepository.delete(schedule);
   }
 }
