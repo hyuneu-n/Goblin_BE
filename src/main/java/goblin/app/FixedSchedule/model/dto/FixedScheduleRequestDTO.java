@@ -11,7 +11,6 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 public class FixedScheduleRequestDTO {
-  private Long categoryId;
   private String scheduleName;
   private List<DayOfWeek> dayOfWeek;
   private String amPmStart;
@@ -20,4 +19,6 @@ public class FixedScheduleRequestDTO {
   private String amPmEnd;
   private int endHour;
   private int endMinute;
+  private int colorCode; // 1부터 5까지 색상 선택
+  private boolean isPublic; // 공개 여부
 }
