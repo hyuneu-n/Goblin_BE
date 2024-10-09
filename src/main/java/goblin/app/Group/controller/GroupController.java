@@ -460,4 +460,33 @@ public class GroupController {
     SseEmitter emitter = notificationService.eventN(user.getId());
     return ResponseEntity.ok(emitter);
   }
+  // 확정되지 않은 일정 조회
+  @Operation(summary = "일정 조회", description = "calendarId를 사용하여 일정을 조회합니다.")
+  @GetMapping("/calendar/{calendarId}")
+  public ResponseEntity<GroupCalendarResponseDTO> getCalendar(
+      @PathVariable Long calendarId,
+      @RequestHeader(value = "Authorization", required = true) String bearerToken) {
+
+    String loginId = extractLoginId(bearerToken);
+
+    // 서비스에서 일정을 가져옴
+    GroupCalendarResponseDTO calendar = groupService.getCalendar(calendarId);
+
+    return ResponseEntity.ok(calendar);
+  }
+
+  // 그룹 확정되지 않은 일정 조회
+  @Operation(summary = "일정 조회", description = "calendarId를 사용하여 일정을 조회합니다.")
+  @GetMapping("/calendar/confirmed/{calendarId}")
+  public ResponseEntity<GroupConfirmedCalendarDTO> getConfirmedCalendar(
+      @PathVariable Long calendarId,
+      @RequestHeader(value = "Authorization", required = true) String bearerToken) {
+
+    String loginId = extractLoginId(bearerToken);
+
+    // 서비스에서 일정을 가져옴
+    GroupConfirmedCalendarDTO calendar = groupService.getConfirmedCalendar(calendarId);
+
+    return ResponseEntity.ok(calendar);
+  }
 }

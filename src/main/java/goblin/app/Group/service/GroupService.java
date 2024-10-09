@@ -264,22 +264,7 @@ public class GroupService {
                                   .build())
                       .collect(Collectors.toList());
 
-              return GroupCalendarResponseDTO.builder()
-                  .id(calendar.getId())
-                  .groupName(calendar.getGroup().getGroupName())
-                  .title(calendar.getTitle())
-                  .selectedDates(
-                      calendar.getSelectedDates().stream()
-                          .map(LocalDate::toString)
-                          .collect(Collectors.toList()))
-                  .time(calendar.getTime())
-                  .place(calendar.getPlace())
-                  .link(calendar.getLink())
-                  .note(calendar.getNote())
-                  .confirmed(calendar.isConfirmed())
-                  .createdBy(calendar.getCreatedBy().getUsername()) // 주최자 username 반환
-                  .selectedDateTimes(selectedDateTimes) // startDateTime과 endDateTime 반환
-                  .build();
+              return new GroupCalendarResponseDTO(calendar);
             })
         .collect(Collectors.toList());
   }
@@ -736,5 +721,26 @@ public class GroupService {
                     .participants(List.of(availableTime.getUser().getLoginId())) // 참가자 loginId 반환
                     .build())
         .collect(Collectors.toList());
+  }
+
+  // 확정되지 않은 일정 calendarId로 조회
+  @Transactional
+  public GroupCalendarResponseDTO getCalendar(Long calendarId) {
+    // 일정 조회
+    GroupCalendar calendar =
+        groupCalendarRepository
+            .findById(calendarId)
+            .orElseThrow(() -> new RuntimeException("일정을 찾을 수 없습니다: calendarId=" + calendarId));
+    return new GroupCalendarResponseDTO(calendar);
+  }
+
+  // 확정된 일정 calendarId로 조회
+  @Transactional
+  public GroupConfirmedCalendarDTO getConfirmedCalendar(Long calendarId) {
+    GroupConfirmedCalendar calendar =
+        groupConfirmedCalendarRepository
+            .findByCalendarId(calendarId)
+            .orElseThrow(() -> new RuntimeException("일정을 찾을 수 없습니다: calendarId=" + calendarId));
+    return new GroupConfirmedCalendarDTO(calendar);
   }
 }
