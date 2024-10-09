@@ -186,9 +186,6 @@ public class GroupController {
     try {
       groupService.confirmCustomTimeInRange(
           calendarId, request.getOptimalTimeSlotId(), request, loginId);
-
-      // 모든 사용자들에게 알림
-      notificationService.eventFixedNotify(calendarId);
       return ResponseEntity.ok("일정이 확정되었습니다.");
     } catch (RuntimeException e) {
       return ResponseEntity.badRequest().body(e.getMessage());
