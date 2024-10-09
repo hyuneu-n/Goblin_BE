@@ -739,7 +739,7 @@ public class GroupService {
   public GroupConfirmedCalendarDTO getConfirmedCalendar(Long calendarId) {
     GroupConfirmedCalendar calendar =
         groupConfirmedCalendarRepository
-            .findByCalendarId(calendarId)
+            .findById(calendarId)
             .orElseThrow(() -> new RuntimeException("일정을 찾을 수 없습니다: calendarId=" + calendarId));
     return new GroupConfirmedCalendarDTO(calendar);
   }
