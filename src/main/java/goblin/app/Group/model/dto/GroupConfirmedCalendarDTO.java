@@ -18,6 +18,8 @@ public class GroupConfirmedCalendarDTO {
   private String place;
   private String note;
 
+  private String color;
+
   // 인자를 받는 생성자 추가
   public GroupConfirmedCalendarDTO(
       LocalDate confirmedDate,
@@ -25,13 +27,15 @@ public class GroupConfirmedCalendarDTO {
       LocalDateTime endDateTime,
       String title,
       String place,
-      String note) {
+      String note,
+      String color) {
     this.startDateTime = startDateTime;
     this.endDateTime = endDateTime;
 
     this.title = title;
     this.place = place;
     this.note = note;
+    this.color = color;
   }
 
   // 기본 생성자
