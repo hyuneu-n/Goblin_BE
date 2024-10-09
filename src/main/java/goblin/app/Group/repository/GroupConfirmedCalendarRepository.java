@@ -11,7 +11,7 @@ public interface GroupConfirmedCalendarRepository
     extends JpaRepository<GroupConfirmedCalendar, Long> {
   List<GroupConfirmedCalendar> findAllByGroupId(Long groupId);
 
-  List<GroupConfirmedCalendar> findByGroupIdAndCalendarId(Long groupId, Long calendarId);
+  Optional<GroupConfirmedCalendar> findByGroupIdAndCalendarId(Long groupId, Long calendarId);
 
   Optional<GroupConfirmedCalendar> findByCalendarId(Long calendarId);
 }

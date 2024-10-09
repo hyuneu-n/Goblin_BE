@@ -2,6 +2,7 @@ package goblin.app.Group.model.entity;
 
 import java.time.LocalDateTime;
 
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -39,4 +40,28 @@ public class GroupConfirmedCalendar {
   // 시간블럭 색상코드
   @Column(name = "color", nullable = false)
   private String color = "A5B4DB";
+
+  private String title;
+  private String place;
+  private String note;
+
+  @Builder
+  public GroupConfirmedCalendar(
+      Long groupId,
+      Long calendarId,
+      LocalDateTime confirmedStartTime,
+      LocalDateTime confirmedEndTime,
+      String color,
+      String title,
+      String place,
+      String note) {
+    this.groupId = groupId;
+    this.calendarId = calendarId;
+    this.confirmedStartTime = confirmedStartTime;
+    this.confirmedEndTime = confirmedEndTime;
+    this.color = color;
+    this.title = title;
+    this.place = place;
+    this.note = note;
+  }
 }

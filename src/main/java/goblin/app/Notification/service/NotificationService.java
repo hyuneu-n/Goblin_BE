@@ -54,6 +54,9 @@ public class NotificationService {
     SseEmitter emitter = new SseEmitter(DEFAULT_TIMEOUT); // 1시간 타임아웃
     emitterRepository.save(userId, emitter);
 
+    // 주기적으로 keep-alive 메시지 전송을 위한 스케줄러 생성
+    ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+
     // 클라이언트로 초기 더미 데이터 전송
     try {
       User user =
@@ -67,7 +70,6 @@ public class NotificationService {
       log.info("Dummy notification sent to user with userId: {}", userId);
 
       // 주기적으로 keep-alive 메시지 전송 (30초마다)
-      ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
       scheduler.scheduleAtFixedRate(
           () -> {
             try {
@@ -77,6 +79,7 @@ public class NotificationService {
               log.error("Error while sending keep-alive message to userId: {}", userId, e);
               emitter.completeWithError(e);
               emitterRepository.deleteById(userId); // 에러 발생 시 emitter 제거
+              scheduler.shutdown(); // 스케줄러 종료
             }
           },
           0,
@@ -86,24 +89,31 @@ public class NotificationService {
     } catch (IOException e) {
       log.error("Error in eventN for userId: {}", userId, e);
       emitter.completeWithError(e);
+      scheduler.shutdown(); // 에러 발생 시 스케줄러 종료
     }
 
+    // Emitter 완료 처리
     emitter.onCompletion(
         () -> {
           log.info("Emitter for userId {} completed", userId);
           emitterRepository.deleteById(userId);
+          scheduler.shutdown(); // 스케줄러 종료
         });
 
+    // 타임아웃 처리
     emitter.onTimeout(
         () -> {
           log.info("Emitter for userId {} timed out", userId);
           emitterRepository.deleteById(userId);
+          scheduler.shutdown(); // 스케줄러 종료
         });
 
+    // 에러 발생 처리
     emitter.onError(
         (e) -> {
           log.error("Emitter for userId {} encountered error: {}", userId, e.getMessage());
           emitterRepository.deleteById(userId);
+          scheduler.shutdown(); // 스케줄러 종료
         });
 
     return emitter;
@@ -203,9 +213,9 @@ public class NotificationService {
   // 일정 확정 시 그룹 이벤트의 모든 참여자에게 알림 전송
   public void eventFixedNotify(Long calendarId) {
     GroupCalendar groupCalendar =
-            groupCalendarRepository
-                    .findById(calendarId)
-                    .orElseThrow(() -> new RuntimeException("일정을 찾을 수 없습니다."));
+        groupCalendarRepository
+            .findById(calendarId)
+            .orElseThrow(() -> new RuntimeException("일정을 찾을 수 없습니다."));
     GroupConfirmedCalendar groupEvent =
         groupConfirmedCalendarRepository
             .findByCalendarId(calendarId)
@@ -217,7 +227,6 @@ public class NotificationService {
     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yy년 MM월 dd일");
     String fixedDate = groupEvent.getConfirmedStartTime().format(formatter);
 
-
     // NotificationDto 생성
     NotificationDto dto = new NotificationDto();
     dto.setMsgTitle("모임 일정이 확정됐어요!");
@@ -225,6 +234,8 @@ public class NotificationService {
     dto.setDetails1(fixedDate);
     dto.setDetails2(duration.toString());
     dto.setType(NotificationType.EVENT_CREATED); // 알림 유형 설정
+    dto.setCalendarId(calendarId);
+    dto.setGroupId(groupEvent.getId());
 
     // 그룹 캘린더 참가자 목록
     List<GroupCalendarParticipant> participants =
@@ -285,6 +296,8 @@ public class NotificationService {
     dto.setDetails1(period);
     dto.setDetails2(duration);
     dto.setType(NotificationType.EVENT_CREATED); // 알림 유형 설정
+    dto.setCalendarId(calendarId);
+    dto.setGroupId(groupEvent.getId());
 
     // 그룹 캘린더 참가자 목록
     List<GroupCalendarParticipant> participants =
@@ -319,7 +332,8 @@ public class NotificationService {
     dto.setDetails1(period);
     dto.setDetails2(duration);
     dto.setType(NotificationType.MUST_FIX_EVENT); // 알림 유형 설정
-
+    dto.setCalendarId(calendarId);
+    dto.setGroupId(groupEvent.getId());
     // 알림 생성 및 저장
     Notification notification = notificationRepository.save(dto.ToEntity(creator));
     // SseEmitter를 통해 사용자에게 알림 전송

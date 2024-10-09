@@ -16,14 +16,25 @@ public class NotificationDto {
   private String details2; // 세부 사항 2
   private NotificationType type; // 알림 유형
 
+  private Long calendarId;
+  private Long groupId;
+
   @Builder
   private NotificationDto(
-      String msgTitle, String eventName, String details1, String details2, NotificationType type) {
+      String msgTitle,
+      String eventName,
+      String details1,
+      String details2,
+      NotificationType type,
+      Long calendarId,
+      Long groupId) {
     this.msgTitle = msgTitle;
     this.eventName = eventName;
     this.details1 = details1;
     this.details2 = details2;
     this.type = type;
+    this.calendarId = calendarId;
+    this.groupId = groupId;
   }
 
   public Notification ToEntity(User user) {
