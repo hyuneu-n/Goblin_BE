@@ -45,8 +45,8 @@ public class FixedSchedule {
   @Column(nullable = false, length = 6)
   private String color;
 
-  @Column(nullable = false)
-  private boolean isPublic;
+  @Column(name = "is_public")
+  private boolean isPublic; // boolean 타입의 필드
 
   public void updateTime(LocalTime startTime, LocalTime endTime) {
     this.startTime = startTime;

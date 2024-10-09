@@ -19,6 +19,7 @@ public class FixedScheduleResponseDTO {
   private String endTime;
   private List<String> dayOfWeek;
   private boolean isPublic;
+  private String color;
 
   public FixedScheduleResponseDTO(FixedSchedule schedule) {
     this.id = schedule.getId();
@@ -28,5 +29,6 @@ public class FixedScheduleResponseDTO {
     this.dayOfWeek =
         schedule.getDayOfWeek().stream().map(DayOfWeek::name).collect(Collectors.toList());
     this.isPublic = schedule.isPublic();
+    this.color = schedule.getColor();
   }
 }
