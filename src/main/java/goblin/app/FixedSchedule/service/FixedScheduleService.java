@@ -9,10 +9,14 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import goblin.app.Common.exception.CustomException;
+import goblin.app.Common.exception.ErrorCode;
 import goblin.app.FixedSchedule.model.dto.FixedScheduleRequestDTO;
 import goblin.app.FixedSchedule.model.dto.FixedScheduleResponseDTO;
 import goblin.app.FixedSchedule.model.entity.FixedSchedule;
 import goblin.app.FixedSchedule.repository.FixedScheduleRepository;
+import goblin.app.Group.model.entity.Group;
+import goblin.app.Group.repository.GroupRepository;
 import goblin.app.User.model.entity.User;
 import goblin.app.User.repository.UserRepository;
 
@@ -22,12 +26,16 @@ public class FixedScheduleService {
 
   private final FixedScheduleRepository fixedScheduleRepository;
   private final UserRepository userRepository;
+  private final GroupRepository groupRepository;
 
   @Transactional
   public FixedScheduleResponseDTO createFixedSchedule(
       FixedScheduleRequestDTO requestDto, User user) {
+    Group group =
+        groupRepository
+            .findById(requestDto.getGroupId())
+            .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
 
-    // 고정 일정 생성
     FixedSchedule fixedSchedule =
         FixedSchedule.builder()
             .scheduleName(requestDto.getScheduleName())
@@ -41,7 +49,8 @@ public class FixedScheduleService {
                     requestDto.getAmPmEnd(), requestDto.getEndHour(), requestDto.getEndMinute()))
             .dayOfWeek(requestDto.getDayOfWeek())
             .user(user)
-            .color(resolveColorCode(requestDto.getColorCode())) // 사용자가 선택한 색상 설정
+            .group(group) // 그룹 설정
+            .color(resolveColorCode(requestDto.getColorCode()))
             .isPublic(requestDto.isPublic()) // 공개 여부 설정
             .build();
 
@@ -49,24 +58,37 @@ public class FixedScheduleService {
     return new FixedScheduleResponseDTO(fixedSchedule);
   }
 
+  // 조회
   @Transactional(readOnly = true)
   public List<FixedScheduleResponseDTO> getUserFixedSchedules(String loginId) {
     User user =
         userRepository
             .findByLoginId(loginId)
             .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다: loginId=" + loginId));
+
     List<FixedSchedule> schedules = fixedScheduleRepository.findByUser(user);
+
+    // 공개 여부에 상관없이 모든 일정 반환
     return schedules.stream().map(FixedScheduleResponseDTO::new).collect(Collectors.toList());
   }
 
+  // 수정
   @Transactional
   public void updateFixedSchedule(
       Long scheduleId, FixedScheduleRequestDTO updateRequest, String loginId) {
+
     // 일정 찾기
     FixedSchedule schedule =
         fixedScheduleRepository
             .findById(scheduleId)
             .orElseThrow(() -> new RuntimeException("일정을 찾을 수 없습니다: scheduleId=" + scheduleId));
+
+    // 그룹 찾기
+    Group group =
+        groupRepository
+            .findById(updateRequest.getGroupId()) // 그룹 ID를 통해 그룹 찾기
+            .orElseThrow(
+                () -> new RuntimeException("그룹을 찾을 수 없습니다: groupId=" + updateRequest.getGroupId()));
 
     // AM/PM 시간 변환
     LocalTime startTime =
@@ -83,6 +105,7 @@ public class FixedScheduleService {
     schedule.setDayOfWeek(updateRequest.getDayOfWeek());
     schedule.updateTime(startTime, endTime);
     schedule.setColor(resolveColorCode(updateRequest.getColorCode())); // 색상 변경 가능
+    schedule.setGroup(group); // 그룹 정보 업데이트
     schedule.setPublic(updateRequest.isPublic()); // 공개 여부 업데이트
 
     fixedScheduleRepository.save(schedule);
