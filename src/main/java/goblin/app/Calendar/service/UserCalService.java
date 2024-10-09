@@ -109,7 +109,7 @@ public class UserCalService {
     List<UserCalendar> scheduleList =
         userCalRepository.findByYearAndMonth(yearMonth[0], yearMonth[1], user);
 
-    return scheduleList.stream().limit(3).map(uCalResponseDto::new).collect(Collectors.toList());
+    return scheduleList.stream().map(uCalResponseDto::new).collect(Collectors.toList());
   }
 
   // 개인 스케줄 일별 조회
