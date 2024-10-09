@@ -587,6 +587,7 @@ public class GroupService {
     confirmedCalendarDTO.setTitle(groupCalendar.getTitle());
     confirmedCalendarDTO.setNote(groupCalendar.getNote());
     confirmedCalendarDTO.setPlace(groupCalendar.getPlace());
+    // color 추가하기
     GroupConfirmedCalendar groupConfirmedCalendar =
         groupConfirmedCalendarRepository.save(confirmedCalendarDTO.toEntity());
     log.info("그룹 캘린더 저장 성공. calendarId: {}", calendarId);

@@ -38,12 +38,13 @@ public class GroupConfirmedCalendar {
   private LocalDateTime confirmedEndTime;
 
   // 시간블럭 색상코드
-  @Column(name = "color", nullable = false)
+  @Column(name = "color", nullable = false, columnDefinition = "A5B4DB")
   private String color = "A5B4DB";
 
   private String title;
   private String place;
   private String note;
+
 
   @Builder
   public GroupConfirmedCalendar(
