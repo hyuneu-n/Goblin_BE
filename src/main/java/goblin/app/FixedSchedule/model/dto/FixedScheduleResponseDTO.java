@@ -13,7 +13,6 @@ import goblin.app.FixedSchedule.model.entity.FixedSchedule;
 @Getter
 @NoArgsConstructor
 public class FixedScheduleResponseDTO {
-  private Long groupId;
   private Long id;
   private String scheduleName;
   private String startTime;
@@ -23,7 +22,6 @@ public class FixedScheduleResponseDTO {
   private String color;
 
   public FixedScheduleResponseDTO(FixedSchedule schedule) {
-    this.groupId = schedule.getGroup().getGroupId();
     this.id = schedule.getId();
     this.scheduleName = schedule.getScheduleName();
     this.startTime = schedule.getStartTime().toString();

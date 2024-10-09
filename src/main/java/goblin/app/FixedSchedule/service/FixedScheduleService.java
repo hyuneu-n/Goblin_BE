@@ -9,13 +9,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import goblin.app.Common.exception.CustomException;
-import goblin.app.Common.exception.ErrorCode;
 import goblin.app.FixedSchedule.model.dto.FixedScheduleRequestDTO;
 import goblin.app.FixedSchedule.model.dto.FixedScheduleResponseDTO;
 import goblin.app.FixedSchedule.model.entity.FixedSchedule;
 import goblin.app.FixedSchedule.repository.FixedScheduleRepository;
-import goblin.app.Group.model.entity.Group;
 import goblin.app.Group.repository.GroupRepository;
 import goblin.app.User.model.entity.User;
 import goblin.app.User.repository.UserRepository;
@@ -31,10 +28,6 @@ public class FixedScheduleService {
   @Transactional
   public FixedScheduleResponseDTO createFixedSchedule(
       FixedScheduleRequestDTO requestDto, User user) {
-    Group group =
-        groupRepository
-            .findById(requestDto.getGroupId())
-            .orElseThrow(() -> new CustomException(ErrorCode.GROUP_NOT_FOUND));
 
     FixedSchedule fixedSchedule =
         FixedSchedule.builder()
@@ -49,7 +42,6 @@ public class FixedScheduleService {
                     requestDto.getAmPmEnd(), requestDto.getEndHour(), requestDto.getEndMinute()))
             .dayOfWeek(requestDto.getDayOfWeek())
             .user(user)
-            .group(group) // 그룹 설정
             .color(resolveColorCode(requestDto.getColorCode()))
             .isPublic(requestDto.isPublic()) // 공개 여부 설정
             .build();
@@ -83,13 +75,6 @@ public class FixedScheduleService {
             .findById(scheduleId)
             .orElseThrow(() -> new RuntimeException("일정을 찾을 수 없습니다: scheduleId=" + scheduleId));
 
-    // 그룹 찾기
-    Group group =
-        groupRepository
-            .findById(updateRequest.getGroupId()) // 그룹 ID를 통해 그룹 찾기
-            .orElseThrow(
-                () -> new RuntimeException("그룹을 찾을 수 없습니다: groupId=" + updateRequest.getGroupId()));
-
     // AM/PM 시간 변환
     LocalTime startTime =
         convertToLocalTime(
@@ -105,7 +90,6 @@ public class FixedScheduleService {
     schedule.setDayOfWeek(updateRequest.getDayOfWeek());
     schedule.updateTime(startTime, endTime);
     schedule.setColor(resolveColorCode(updateRequest.getColorCode())); // 색상 변경 가능
-    schedule.setGroup(group); // 그룹 정보 업데이트
     schedule.setPublic(updateRequest.isPublic()); // 공개 여부 업데이트
 
     fixedScheduleRepository.save(schedule);

@@ -11,7 +11,6 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 public class FixedScheduleRequestDTO {
-  private Long groupId;
   private String scheduleName;
   private List<DayOfWeek> dayOfWeek;
   private String amPmStart;

@@ -12,7 +12,6 @@ import lombok.Setter;
 
 import jakarta.persistence.*;
 
-import goblin.app.Group.model.entity.Group;
 import goblin.app.User.model.entity.User;
 
 @Entity
@@ -31,10 +30,6 @@ public class FixedSchedule {
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "user_id")
   private User user;
-
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "group_id") // 그룹과 연관 관계 설정
-  private Group group;
 
   @Column(nullable = false, length = 13)
   private String scheduleName;
