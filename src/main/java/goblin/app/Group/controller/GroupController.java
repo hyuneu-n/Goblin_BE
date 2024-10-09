@@ -177,10 +177,6 @@ public class GroupController {
       @RequestHeader(value = "Authorization", required = true) String bearerToken) {
 
     String loginId = extractLoginId(bearerToken);
-
-    // 모든 사용자들에게 알림
-    notificationService.eventFixedNotify(calendarId);
-
     // 그룹에 속해 있는지 확인
     if (!groupService.isUserInGroup(groupId, loginId)) {
       return ResponseEntity.status(HttpStatus.FORBIDDEN).body("해당 그룹의 멤버가 아닙니다.");
@@ -190,6 +186,9 @@ public class GroupController {
     try {
       groupService.confirmCustomTimeInRange(
           calendarId, request.getOptimalTimeSlotId(), request, loginId);
+
+      // 모든 사용자들에게 알림
+      notificationService.eventFixedNotify(calendarId);
       return ResponseEntity.ok("일정이 확정되었습니다.");
     } catch (RuntimeException e) {
       return ResponseEntity.badRequest().body(e.getMessage());
