@@ -202,9 +202,13 @@ public class NotificationService {
 
   // 일정 확정 시 그룹 이벤트의 모든 참여자에게 알림 전송
   public void eventFixedNotify(Long calendarId) {
+    GroupCalendar groupCalendar =
+            groupCalendarRepository
+                    .findById(calendarId)
+                    .orElseThrow(() -> new RuntimeException("일정을 찾을 수 없습니다."));
     GroupConfirmedCalendar groupEvent =
         groupConfirmedCalendarRepository
-            .findById(calendarId)
+            .findByCalendarId(calendarId)
             .orElseThrow(() -> new RuntimeException("일정을 찾을 수 없습니다."));
     Long duration =
         java.time.Duration.between(
@@ -213,10 +217,6 @@ public class NotificationService {
     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yy년 MM월 dd일");
     String fixedDate = groupEvent.getConfirmedStartTime().format(formatter);
 
-    GroupCalendar groupCalendar =
-        groupCalendarRepository
-            .findById(calendarId)
-            .orElseThrow(() -> new RuntimeException("일정을 찾을 수 없습니다."));
 
     // NotificationDto 생성
     NotificationDto dto = new NotificationDto();
@@ -239,6 +239,7 @@ public class NotificationService {
         Notification notification = notificationRepository.save(dto.ToEntity(user));
         // SseEmitter를 통해 사용자에게 알림 전송
         sendNotification(user.getLoginId(), dto);
+        log.info("참여자에게 알림 전송: userId = {}, event = {}", user.getId(), dto.getEventName());
       } else {
         log.warn("User not found for participant in Calendar ID: {}", calendarId);
       }

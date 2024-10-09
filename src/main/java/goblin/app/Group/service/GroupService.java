@@ -612,6 +612,7 @@ public class GroupService {
         request.getEndHour(),
         request.getEndMinute(),
         request.getDate());
+    notificationService.eventFixedNotify(calendarId);
     log.info("개인 캘린더에 일정 저장 성공: loginId = {}, calendarId = {}", loginId, calendarId);
   }
 
