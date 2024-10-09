@@ -42,6 +42,7 @@ public class GroupService {
   private final FixedScheduleRepository fixedScheduleRepository;
 
   private final NotificationService notificationService;
+  private final GroupHelper groupHelper;
 
   // 그룹 생성 로직
   public void createGroup(String groupName, String loginId) {
@@ -742,5 +743,10 @@ public class GroupService {
             .findById(calendarId)
             .orElseThrow(() -> new RuntimeException("일정을 찾을 수 없습니다: calendarId=" + calendarId));
     return new GroupConfirmedCalendarDTO(calendar);
+  }
+
+  @Transactional
+  public Group getOrCreatePersonalGroup(User user) {
+    return groupHelper.getOrCreatePersonalGroup(user);
   }
 }

@@ -18,6 +18,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import goblin.app.Common.exception.CustomValidationException;
+import goblin.app.Group.model.entity.Group;
+import goblin.app.Group.model.entity.GroupMember;
+import goblin.app.Group.repository.GroupMemberRepository;
+import goblin.app.Group.service.GroupService;
 import goblin.app.User.model.dto.UserRegistrationResponseDTO;
 import goblin.app.User.model.dto.UserSearchResponseDTO;
 import goblin.app.User.model.entity.User;
@@ -31,6 +35,8 @@ public class UserService implements UserDetailsService {
   private final UserRepository userRepository;
   private final PasswordEncoder passwordEncoder;
   private final JwtUtil jwtUtil;
+  private final GroupService groupService;
+  private final GroupMemberRepository groupMemberRepository;
 
   // 회원가입 비지니스 로직
   public UserRegistrationResponseDTO registerUser(
@@ -68,6 +74,19 @@ public class UserService implements UserDetailsService {
     // User 정보 DB에 저장
     User savedUser = userRepository.save(user);
     log.info("회원가입 성공: 사용자 ID - {}, 닉네임 - {}", savedUser.getLoginId(), savedUser.getUsername());
+
+    // "개인" 그룹 자동 생성
+    Group personalGroup = groupService.getOrCreatePersonalGroup(savedUser);
+
+    // 그룹과 사용자 연결 (GroupMember 생성)
+    GroupMember groupMember = new GroupMember();
+    groupMember.setUser(savedUser);
+    groupMember.setGroupId(personalGroup.getGroupId());
+    groupMember.setRole("USER"); // 기본 역할 설정
+    groupMemberRepository.save(groupMember);
+
+    log.info(
+        "개인 그룹 생성 완료: 그룹명 - {}, 그룹장 - {}", personalGroup.getGroupName(), savedUser.getLoginId());
 
     // 응답 DTO 생성 및 반환
     return new UserRegistrationResponseDTO(

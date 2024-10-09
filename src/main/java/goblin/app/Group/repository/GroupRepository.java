@@ -24,4 +24,6 @@ public interface GroupRepository extends JpaRepository<Group, Long> {
   Optional<Group> findByIdAndNotDeleted(Long groupId);
 
   boolean existsByGroupName(String groupName);
+
+  Optional<Group> findByGroupName(String groupName);
 }
