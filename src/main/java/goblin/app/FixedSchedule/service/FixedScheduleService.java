@@ -1,6 +1,7 @@
 package goblin.app.FixedSchedule.service;
 
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -13,7 +14,10 @@ import goblin.app.FixedSchedule.model.dto.FixedScheduleRequestDTO;
 import goblin.app.FixedSchedule.model.dto.FixedScheduleResponseDTO;
 import goblin.app.FixedSchedule.model.entity.FixedSchedule;
 import goblin.app.FixedSchedule.repository.FixedScheduleRepository;
+import goblin.app.Group.model.dto.GroupResponseDto;
+import goblin.app.Group.model.entity.Group;
 import goblin.app.Group.repository.GroupRepository;
+import goblin.app.Group.service.GroupService;
 import goblin.app.User.model.entity.User;
 import goblin.app.User.repository.UserRepository;
 
@@ -24,30 +28,47 @@ public class FixedScheduleService {
   private final FixedScheduleRepository fixedScheduleRepository;
   private final UserRepository userRepository;
   private final GroupRepository groupRepository;
+  private final GroupService groupService;
 
   @Transactional
   public FixedScheduleResponseDTO createFixedSchedule(
       FixedScheduleRequestDTO requestDto, User user) {
 
-    FixedSchedule fixedSchedule =
-        FixedSchedule.builder()
-            .scheduleName(requestDto.getScheduleName())
-            .startTime(
-                convertToLocalTime(
-                    requestDto.getAmPmStart(),
-                    requestDto.getStartHour(),
-                    requestDto.getStartMinute()))
-            .endTime(
-                convertToLocalTime(
-                    requestDto.getAmPmEnd(), requestDto.getEndHour(), requestDto.getEndMinute()))
-            .dayOfWeek(requestDto.getDayOfWeek())
-            .user(user)
-            .color(resolveColorCode(requestDto.getColorCode()))
-            .isPublic(requestDto.isPublic()) // 공개 여부 설정
-            .build();
+    // 유저가 속한 그룹 조회
+    List<GroupResponseDto> userGroups = groupService.getUserGroups(user.getLoginId());
 
-    fixedScheduleRepository.save(fixedSchedule);
-    return new FixedScheduleResponseDTO(fixedSchedule);
+    List<FixedSchedule> schedules = new ArrayList<>();
+
+    for (GroupResponseDto groupDto : userGroups) {
+      Group group =
+          groupRepository
+              .findById(groupDto.getGroupId())
+              .orElseThrow(
+                  () -> new RuntimeException("그룹을 찾을 수 없습니다: groupId=" + groupDto.getGroupId()));
+
+      FixedSchedule fixedSchedule =
+          FixedSchedule.builder()
+              .scheduleName(requestDto.getScheduleName())
+              .startTime(
+                  convertToLocalTime(
+                      requestDto.getAmPmStart(),
+                      requestDto.getStartHour(),
+                      requestDto.getStartMinute()))
+              .endTime(
+                  convertToLocalTime(
+                      requestDto.getAmPmEnd(), requestDto.getEndHour(), requestDto.getEndMinute()))
+              .dayOfWeek(requestDto.getDayOfWeek())
+              .user(user)
+              .color(resolveColorCode(requestDto.getColorCode())) // 사용자가 선택한 색상 설정
+              .isPublic(requestDto.isPublic()) // 공개 여부 설정
+              .group(group) // 그룹 정보 추가
+              .build();
+
+      schedules.add(fixedSchedule);
+      fixedScheduleRepository.save(fixedSchedule);
+    }
+
+    return new FixedScheduleResponseDTO(schedules.get(0)); // 첫번째 일정 정보 반환 (예시)
   }
 
   // 조회

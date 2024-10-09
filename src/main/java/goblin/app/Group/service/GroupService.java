@@ -1,5 +1,6 @@
 package goblin.app.Group.service;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Service;
 
 import goblin.app.Calendar.model.dto.request.uCalRequestDto;
 import goblin.app.Calendar.service.UserCalService;
+import goblin.app.FixedSchedule.model.entity.FixedSchedule;
 import goblin.app.FixedSchedule.repository.FixedScheduleRepository;
 import goblin.app.Group.model.dto.*;
 import goblin.app.Group.model.entity.*;
@@ -44,7 +46,8 @@ public class GroupService {
   private final NotificationService notificationService;
   private final GroupHelper groupHelper;
 
-  // 그룹 생성 로직
+  // 그룹 생성
+  @Transactional
   public void createGroup(String groupName, String loginId) {
     User user =
         userRepository
@@ -69,7 +72,34 @@ public class GroupService {
     groupMember.setRole("MASTER");
     groupMemberRepository.save(groupMember);
 
-    log.info("그룹 생성 완료: 그룹명 - {}, 그룹장 - {}", groupName, loginId);
+    // 유저가 속한 기존 고정 일정 조회
+    List<FixedSchedule> userFixedSchedules = fixedScheduleRepository.findByUser(user);
+
+    // 유저의 기존 고정 일정을 새 그룹에 복사
+    for (FixedSchedule schedule : userFixedSchedules) {
+      // dayOfWeek 리스트도 새롭게 복사
+      List<DayOfWeek> copiedDayOfWeek = new ArrayList<>(schedule.getDayOfWeek());
+
+      FixedSchedule newSchedule =
+          FixedSchedule.builder()
+              .scheduleName(schedule.getScheduleName())
+              .startTime(schedule.getStartTime())
+              .endTime(schedule.getEndTime())
+              .dayOfWeek(copiedDayOfWeek) // 새로운 dayOfWeek 리스트 사용
+              .user(user)
+              .color(schedule.getColor())
+              .isPublic(schedule.isPublic())
+              .group(group) // 새로운 그룹에 고정 일정 추가
+              .build();
+
+      fixedScheduleRepository.save(newSchedule);
+    }
+
+    log.info(
+        "그룹 생성 완료: 그룹명 - {}, 그룹장 - {}, 기존 고정 일정 {}개 추가됨",
+        groupName,
+        loginId,
+        userFixedSchedules.size());
   }
 
   // 그룹 방장 여부 확인 로직

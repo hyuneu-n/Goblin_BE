@@ -12,6 +12,7 @@ import lombok.Setter;
 
 import jakarta.persistence.*;
 
+import goblin.app.Group.model.entity.Group;
 import goblin.app.User.model.entity.User;
 
 @Entity
@@ -33,6 +34,10 @@ public class FixedSchedule {
 
   @Column(nullable = false, length = 13)
   private String scheduleName;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "group_id")
+  private Group group;
 
   @ElementCollection(targetClass = DayOfWeek.class)
   @CollectionTable(name = "schedule_days", joinColumns = @JoinColumn(name = "schedule_id"))
