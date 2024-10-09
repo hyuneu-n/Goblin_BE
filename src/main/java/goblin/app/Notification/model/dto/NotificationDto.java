@@ -45,6 +45,8 @@ public class NotificationDto {
         .details1(details1)
         .details2(details2)
         .type(type)
+        .calendarId(calendarId)
+        .groupId(groupId)
         .build();
   }
 }
