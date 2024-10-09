@@ -184,4 +184,25 @@ public class FixedScheduleService {
 
     fixedScheduleRepository.delete(schedule);
   }
+
+  @Transactional(readOnly = true)
+  public List<FixedScheduleResponseDTO> getPersonalGroupSchedules(String loginId) {
+    // 유저 정보 조회
+    User user =
+        userRepository
+            .findByLoginId(loginId)
+            .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다: loginId=" + loginId));
+
+    // "개인" 그룹 조회 (유저가 만든 그룹 중 "개인" 그룹을 찾아옴)
+    Group personalGroup =
+        groupRepository
+            .findByGroupNameAndCreatedBy("개인", user)
+            .orElseThrow(() -> new RuntimeException("개인 그룹을 찾을 수 없습니다."));
+
+    // "개인" 그룹의 고정 일정 조회
+    List<FixedSchedule> schedules = fixedScheduleRepository.findByGroup(personalGroup);
+
+    // 고정 일정 리스트를 DTO로 변환하여 반환
+    return schedules.stream().map(FixedScheduleResponseDTO::new).collect(Collectors.toList());
+  }
 }

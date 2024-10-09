@@ -26,4 +26,6 @@ public interface GroupRepository extends JpaRepository<Group, Long> {
   boolean existsByGroupName(String groupName);
 
   Optional<Group> findByGroupName(String groupName);
+
+  Optional<Group> findByGroupNameAndCreatedBy(String groupName, User createdBy);
 }

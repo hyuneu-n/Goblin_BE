@@ -146,4 +146,20 @@ public class FixedScheduleController {
     fixedScheduleService.togglePublicStatus(scheduleId, groupId, loginId);
     return ResponseEntity.ok("공개 여부가 전환되었습니다.");
   }
+
+  // 개인 그룹의 고정 일정을 조회하는 API
+  @GetMapping("/personal-group/schedules")
+  @Operation(summary = "'개인'그룹(개인 캘린더만의) 고정 일정 조회", description = "개인 그룹의 고정 일정을 조회")
+  public ResponseEntity<List<FixedScheduleResponseDTO>> getPersonalGroupSchedules(
+      @RequestHeader(value = "Authorization", required = true) String bearerToken) {
+    try {
+      String loginId = extractLoginId(bearerToken);
+      List<FixedScheduleResponseDTO> schedules =
+          fixedScheduleService.getPersonalGroupSchedules(loginId);
+      return ResponseEntity.ok(schedules);
+    } catch (RuntimeException e) {
+      log.error("개인 그룹 고정 일정 조회 실패: {}", e.getMessage());
+      return ResponseEntity.badRequest().body(null);
+    }
+  }
 }
