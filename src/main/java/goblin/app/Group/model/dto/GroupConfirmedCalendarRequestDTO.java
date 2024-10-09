@@ -22,8 +22,6 @@ public class GroupConfirmedCalendarRequestDTO {
   private String place;
   private String note;
 
-  private String color;
-
   // 인자를 받는 생성자 추가
   @Builder
   public GroupConfirmedCalendarRequestDTO(
@@ -33,8 +31,7 @@ public class GroupConfirmedCalendarRequestDTO {
       LocalDateTime endDateTime,
       String title,
       String place,
-      String note,
-      String color) {
+      String note) {
     this.groupId = groupId;
     this.calendarId = calendarId;
     this.startDateTime = startDateTime;
@@ -42,7 +39,6 @@ public class GroupConfirmedCalendarRequestDTO {
     this.title = title;
     this.place = place;
     this.note = note;
-    this.color = color;
   }
 
   public GroupConfirmedCalendar toEntity() {

@@ -37,10 +37,6 @@ public class GroupConfirmedCalendar {
   @Column(nullable = false)
   private LocalDateTime confirmedEndTime;
 
-  // 시간블럭 색상코드
-  @Column(name = "color", nullable = false)
-  private String color = "A5B4DB";
-
   private String title;
   private String place;
   private String note;
@@ -51,7 +47,6 @@ public class GroupConfirmedCalendar {
       Long calendarId,
       LocalDateTime confirmedStartTime,
       LocalDateTime confirmedEndTime,
-      String color,
       String title,
       String place,
       String note) {
@@ -59,7 +54,6 @@ public class GroupConfirmedCalendar {
     this.calendarId = calendarId;
     this.confirmedStartTime = confirmedStartTime;
     this.confirmedEndTime = confirmedEndTime;
-    this.color = color;
     this.title = title;
     this.place = place;
     this.note = note;
