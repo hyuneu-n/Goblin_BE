@@ -408,9 +408,6 @@ public class GroupService {
       availableTime.setStartTime(startDateTime);
       availableTime.setEndTime(endDateTime);
       availableTimeRepository.save(availableTime);
-      if (haveAllUsersSubmittedAvailableTime(calendarId)) {
-        notificationService.eventSelectedNotify(calendarId);
-      }
 
       log.info("참여자의 가능 시간 등록 완료: calendarId = {}, userId = {}", calendarId, user.getId());
     }
@@ -422,6 +419,9 @@ public class GroupService {
             .orElseThrow(() -> new RuntimeException("참여자를 찾을 수 없습니다."));
     participant.setAvailableTimeSubmitted(true); // 제출 완료 상태로 변경
     groupCalendarParticipantRepository.save(participant);
+    if (haveAllUsersSubmittedAvailableTime(calendarId)) {
+      notificationService.eventSelectedNotify(calendarId);
+    }
 
     log.info("참여자의 가능 시간 제출 완료 상태 업데이트: calendarId = {}, userId = {}", calendarId, user.getId());
   }
