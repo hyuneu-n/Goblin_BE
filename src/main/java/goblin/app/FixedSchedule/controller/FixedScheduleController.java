@@ -122,26 +122,4 @@ public class FixedScheduleController {
     }
     throw new RuntimeException("Authorization token is missing or invalid");
   }
-
-  // 공개여부만 수정하는 api
-  @Operation(summary = "공개/비공개", description = "공개여부 토글")
-  @PutMapping("/{scheduleId}/toggle-public")
-  public ResponseEntity<?> togglePublicStatus(
-      @PathVariable Long scheduleId,
-      @RequestParam Long groupId, // 그룹 ID도 요청 파라미터로 받음
-      @RequestHeader(value = "Authorization", required = true) String bearerToken) {
-    try {
-      // 토큰에서 loginId 추출
-      String loginId = extractLoginId(bearerToken);
-
-      // 공개 여부 토글 서비스 호출
-      FixedScheduleResponseDTO responseDto =
-          fixedScheduleService.togglePublicStatus(scheduleId, groupId, loginId);
-
-      return ResponseEntity.ok(responseDto);
-    } catch (CustomException e) {
-      log.error("공개 여부 토글 실패: {}", e.getMessage());
-      return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
-    }
-  }
 }
