@@ -71,6 +71,30 @@ public class FixedScheduleService {
     return new FixedScheduleResponseDTO(schedules.get(0)); // 첫번째 일정 정보 반환 (예시)
   }
 
+  @Transactional(readOnly = true)
+  public List<FixedScheduleResponseDTO> getSchedulesByGroup(Long groupId, String loginId) {
+    Group group =
+        groupRepository
+            .findById(groupId)
+            .orElseThrow(() -> new RuntimeException("그룹을 찾을 수 없습니다: groupId=" + groupId));
+
+    List<FixedSchedule> schedules = fixedScheduleRepository.findByGroup(group);
+
+    return schedules.stream().map(FixedScheduleResponseDTO::new).collect(Collectors.toList());
+  }
+
+  @Transactional
+  public void togglePublicStatus(Long scheduleId, Long groupId, String loginId) {
+    FixedSchedule schedule =
+        fixedScheduleRepository
+            .findByIdAndGroup_GroupId(scheduleId, groupId)
+            .orElseThrow(() -> new RuntimeException("일정을 찾을 수 없습니다: scheduleId=" + scheduleId));
+
+    // 공개 상태 토글
+    schedule.setPublic(!schedule.isPublic());
+    fixedScheduleRepository.save(schedule);
+  }
+
   // 조회
   @Transactional(readOnly = true)
   public List<FixedScheduleResponseDTO> getUserFixedSchedules(String loginId) {

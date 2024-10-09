@@ -75,24 +75,30 @@ public class GroupService {
     // 유저가 속한 기존 고정 일정 조회
     List<FixedSchedule> userFixedSchedules = fixedScheduleRepository.findByUser(user);
 
-    // 유저의 기존 고정 일정을 새 그룹에 복사
+    // 유저의 기존 고정 일정을 새 그룹에 복사 (중복 방지)
     for (FixedSchedule schedule : userFixedSchedules) {
-      // dayOfWeek 리스트도 새롭게 복사
-      List<DayOfWeek> copiedDayOfWeek = new ArrayList<>(schedule.getDayOfWeek());
+      // 새로운 그룹에 같은 일정이 이미 존재하는지 확인
+      boolean scheduleExists =
+          fixedScheduleRepository.existsByScheduleNameAndGroup(schedule.getScheduleName(), group);
 
-      FixedSchedule newSchedule =
-          FixedSchedule.builder()
-              .scheduleName(schedule.getScheduleName())
-              .startTime(schedule.getStartTime())
-              .endTime(schedule.getEndTime())
-              .dayOfWeek(copiedDayOfWeek) // 새로운 dayOfWeek 리스트 사용
-              .user(user)
-              .color(schedule.getColor())
-              .isPublic(schedule.isPublic())
-              .group(group) // 새로운 그룹에 고정 일정 추가
-              .build();
+      if (!scheduleExists) { // 일정이 없을 때만 추가
+        // dayOfWeek 리스트 복사
+        List<DayOfWeek> copiedDayOfWeek = new ArrayList<>(schedule.getDayOfWeek());
 
-      fixedScheduleRepository.save(newSchedule);
+        FixedSchedule newSchedule =
+            FixedSchedule.builder()
+                .scheduleName(schedule.getScheduleName())
+                .startTime(schedule.getStartTime())
+                .endTime(schedule.getEndTime())
+                .dayOfWeek(copiedDayOfWeek) // 새로운 dayOfWeek 리스트 사용
+                .user(user)
+                .color(schedule.getColor())
+                .isPublic(schedule.isPublic())
+                .group(group) // 새로운 그룹에 고정 일정 추가
+                .build();
+
+        fixedScheduleRepository.save(newSchedule);
+      }
     }
 
     log.info(
