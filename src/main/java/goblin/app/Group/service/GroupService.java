@@ -668,13 +668,7 @@ public class GroupService {
     LocalDateTime endDateTime = calendar.getConfirmedEndTime();
 
     // GroupConfirmedCalendarDTO로 변환하여 반환
-    return new GroupConfirmedCalendarDTO(
-        confirmedDate,
-        startDateTime,
-        endDateTime,
-        calendar.getTitle(),
-        calendar.getPlace(),
-        calendar.getNote());
+    return new GroupConfirmedCalendarDTO(calendar);
   }
 
   // 그룹 멤버 리스트 조회 메서드

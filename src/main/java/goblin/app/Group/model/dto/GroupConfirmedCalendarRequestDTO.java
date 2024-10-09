@@ -54,7 +54,6 @@ public class GroupConfirmedCalendarRequestDTO {
         .title(title)
         .place(place)
         .note(note)
-        .color(color)
         .build();
   }
 }
