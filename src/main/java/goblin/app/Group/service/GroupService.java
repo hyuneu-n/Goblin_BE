@@ -14,7 +14,7 @@ import jakarta.transaction.Transactional;
 
 import org.springframework.stereotype.Service;
 
-import goblin.app.Calendar.model.dto.request.uCalSaveRequestDto;
+import goblin.app.Calendar.model.dto.request.uCalRequestDto;
 import goblin.app.Calendar.service.UserCalService;
 import goblin.app.FixedSchedule.repository.FixedScheduleRepository;
 import goblin.app.Group.model.dto.AvailableTimeRequestDTO;
@@ -637,12 +637,12 @@ public class GroupService {
             .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다: loginId=" + loginId));
 
     // DTO 생성 시 AM/PM 값과 시간을 전달
-    uCalSaveRequestDto requestDto =
-        uCalSaveRequestDto
+    uCalRequestDto requestDto =
+        uCalRequestDto
             .builder()
             .title(calendar.getTitle())
             .note(calendar.getNote())
-            .date(eventDate)
+            .date(List.of(eventDate))
             .amPmStart(amPmStart)
             .startHour(startHour)
             .startMinute(startMinute)

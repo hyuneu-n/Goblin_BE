@@ -12,7 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import goblin.app.Calendar.model.dto.request.uCalSaveRequestDto;
+import goblin.app.Calendar.model.dto.request.uCalRequestDto;
 import goblin.app.Calendar.model.dto.response.uCalResponseDto;
 import goblin.app.Calendar.service.UserCalService;
 import goblin.app.User.model.entity.User;
@@ -31,46 +31,44 @@ public class UserCalController {
 
   @Autowired private final UserCalService userCalService;
   @Autowired private final JwtUtil jwtUtil;
-
   @Autowired private final UserRepository userRepository;
 
-  // 일반 스케쥴 등록
-  @Operation(summary = "일반 일정 등록", description = "사용자의 새로운 일정을 캘린더에 저장")
+  // 생성
   @PostMapping("/save")
-  public ResponseEntity<uCalResponseDto> save(
-      @RequestBody @Valid uCalSaveRequestDto requestDto,
+  @Operation(summary = "일정 등록", description = "사용자의 새로운 일정을 캘린더에 저장")
+  public ResponseEntity<List<uCalResponseDto>> save(
+      @RequestBody @Valid uCalRequestDto requestDto,
       @RequestHeader(value = "Authorization", required = false) String bearerToken) {
     try {
       User user = getUserFromToken(bearerToken);
-      uCalResponseDto responseDto = userCalService.save(requestDto, user);
-      return ResponseEntity.status(HttpStatus.CREATED).body(responseDto);
+      List<uCalResponseDto> responseDtoList = userCalService.save(requestDto, user);
+      return ResponseEntity.status(HttpStatus.CREATED).body(responseDtoList);
     } catch (RuntimeException e) {
       log.error("유저 캘린더 저장 실패: {}", e.getMessage());
       return ResponseEntity.badRequest().body(null);
     }
   }
 
-  // 유저 캘린더 수정
-  @Operation(summary = "유저 캘린더 수정", description = "기존 캘린더 일정 수정")
-  @PutMapping("/edit")
-  public ResponseEntity<uCalResponseDto> edit(
-      @RequestBody @Valid uCalSaveRequestDto requestDto, // @Valid 적용
-      @RequestHeader(value = "Authorization", required = false) String bearerToken,
-      @RequestHeader(value = "Schedule-Id") Long scheduleId) { // 헤더에서 ID 받기
+  // 수정
+  @PutMapping("/edit/{scheduleId}")
+  @Operation(summary = "일정 수정", description = "기존 일정 수정")
+  public ResponseEntity<List<uCalResponseDto>> edit(
+      @PathVariable Long scheduleId,
+      @RequestBody @Valid uCalRequestDto requestDto,
+      @RequestHeader(value = "Authorization", required = false) String bearerToken) {
     try {
       User user = getUserFromToken(bearerToken);
-      uCalResponseDto responseDto =
-          userCalService.edit(scheduleId, requestDto, user); // scheduleId 전달
-      return ResponseEntity.status(HttpStatus.OK).body(responseDto);
+      List<uCalResponseDto> responseDtoList = userCalService.edit(scheduleId, requestDto, user);
+      return ResponseEntity.status(HttpStatus.OK).body(responseDtoList);
     } catch (RuntimeException e) {
       log.error("유저 캘린더 수정 실패: {}", e.getMessage());
       return ResponseEntity.badRequest().body(null);
     }
   }
 
-  // 유저 캘린더 삭제
-  @Operation(summary = "유저 캘린더 삭제", description = "사용자의 특정 일정을 캘린더에서 삭제")
+  // 삭제
   @DeleteMapping("/delete/{scheduleId}")
+  @Operation(summary = "일정 삭제", description = "사용자의 일정을 캘린더에서 삭제")
   public ResponseEntity<uCalResponseDto> delete(
       @PathVariable Long scheduleId,
       @RequestHeader(value = "Authorization", required = false) String bearerToken) {
@@ -84,6 +82,7 @@ public class UserCalController {
     }
   }
 
+  // 조회
   // 특정 달의 캘린더 조회
   @Operation(summary = "월별 캘린더 조회", description = "사용자가 입력한 특정 년도와 월의 일정을 조회")
   @GetMapping("/view-month")
@@ -135,13 +134,12 @@ public class UserCalController {
     }
   }
 
-  // JWT 토큰에서 User 객체 추출하는 메서드
+  // JWT 토큰에서 User 객체 추출하는 메서드 (변경 없음)
   private User getUserFromToken(String bearerToken) {
     if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
       String token = bearerToken.substring(7);
       Claims claims = jwtUtil.getAllClaimsFromToken(token);
       String loginId = claims.getId();
-
       return userRepository
           .findByLoginId(loginId)
           .orElseThrow(() -> new RuntimeException("User not found"));

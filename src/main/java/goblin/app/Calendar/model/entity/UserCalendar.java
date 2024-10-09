@@ -47,23 +47,26 @@ public class UserCalendar {
   @Convert(converter = BooleanToYNConverter.class)
   private Boolean deleted = false;
 
-  // 시간블럭 색상코드
   @Column(name = "color", nullable = false)
-  private String color = "CCD7E5";
+  private String color;
 
   @Builder
   public UserCalendar(
-      User user, String title, String note, LocalDateTime startTime, LocalDateTime endTime) {
+      User user,
+      String title,
+      String note,
+      LocalDateTime startTime,
+      LocalDateTime endTime,
+      String color) {
     this.user = user;
     this.title = title;
     this.note = note;
     this.startTime = startTime;
     this.endTime = endTime;
-    this.color = "CCD7E5";
+    this.color = color;
   }
 
   public void update(Long id, String title, LocalDateTime startTime, LocalDateTime endTime) {
-    this.id = id;
     this.title = title;
     this.startTime = startTime;
     this.endTime = endTime;

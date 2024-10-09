@@ -1,7 +1,7 @@
 package goblin.app.Calendar.model.dto.request;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.util.List;
 
 import lombok.Builder;
 import lombok.Getter;
@@ -13,11 +13,11 @@ import jakarta.validation.constraints.NotBlank;
 @Getter
 @Setter
 @NoArgsConstructor
-public class uCalEditRequestDto {
+public class uCalRequestDto {
 
   @NotBlank String title;
   String note;
-  LocalDate date; // 날짜를 위한 필드 추가
+  List<LocalDate> date; // 여러 날짜 처리
   String amPmStart; // AM/PM 값
   int startHour;
   int startMinute;
@@ -26,10 +26,10 @@ public class uCalEditRequestDto {
   int endMinute;
 
   @Builder
-  public uCalEditRequestDto(
+  public uCalRequestDto(
       String title,
       String note,
-      LocalDate date, // 날짜 필드 추가
+      List<LocalDate> date,
       String amPmStart,
       int startHour,
       int startMinute,
@@ -45,23 +45,5 @@ public class uCalEditRequestDto {
     this.amPmEnd = amPmEnd;
     this.endHour = endHour;
     this.endMinute = endMinute;
-  }
-
-  // AM/PM 시간을 LocalDateTime으로 변환하는 메서드
-  public LocalDateTime getStartTime() {
-    return convertToLocalDateTime(date, amPmStart, startHour, startMinute); // 날짜 포함
-  }
-
-  public LocalDateTime getEndTime() {
-    return convertToLocalDateTime(date, amPmEnd, endHour, endMinute); // 날짜 포함
-  }
-
-  private LocalDateTime convertToLocalDateTime(LocalDate date, String amPm, int hour, int minute) {
-    if ("PM".equalsIgnoreCase(amPm) && hour < 12) {
-      hour += 12;
-    } else if ("AM".equalsIgnoreCase(amPm) && hour == 12) {
-      hour = 0;
-    }
-    return date.atTime(hour, minute, 0, 0); // LocalDate와 시간을 결합하여 LocalDateTime 생성
   }
 }

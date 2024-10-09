@@ -2,6 +2,7 @@ package goblin.app.Calendar.service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -11,7 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import goblin.app.Calendar.model.dto.request.uCalSaveRequestDto;
+import goblin.app.Calendar.model.dto.request.uCalRequestDto;
 import goblin.app.Calendar.model.dto.response.uCalResponseDto;
 import goblin.app.Calendar.model.entity.UserCalRepository;
 import goblin.app.Calendar.model.entity.UserCalendar;
@@ -26,60 +27,79 @@ public class UserCalService {
 
   private final UserCalRepository userCalRepository;
 
-  // 일반 스케쥴 등록
+  // 일정 등록
   @Transactional
-  public uCalResponseDto save(uCalSaveRequestDto requestDto, User currentUser) {
-    LocalDateTime startTime = requestDto.getStartTime(); // 변환된 startTime
-    LocalDateTime endTime = requestDto.getEndTime(); // 변환된 endTime
+  public List<uCalResponseDto> save(uCalRequestDto requestDto, User currentUser) {
+    List<LocalDate> dates = requestDto.getDate(); // 여러 날짜를 가져옴
+    List<UserCalendar> calendars = new ArrayList<>();
 
-    UserCalendar userCalendar =
-        UserCalendar.builder()
-            .title(requestDto.getTitle())
-            .note(requestDto.getNote())
-            .user(currentUser)
-            .startTime(startTime)
-            .endTime(endTime)
-            .build();
+    for (LocalDate date : dates) {
+      LocalDateTime startTime =
+          convertToLocalDateTime(
+              date,
+              requestDto.getAmPmStart(),
+              requestDto.getStartHour(),
+              requestDto.getStartMinute());
+      LocalDateTime endTime =
+          convertToLocalDateTime(
+              date, requestDto.getAmPmEnd(), requestDto.getEndHour(), requestDto.getEndMinute());
 
-    userCalRepository.save(userCalendar);
+      UserCalendar userCalendar =
+          UserCalendar.builder()
+              .title(requestDto.getTitle())
+              .note(requestDto.getNote())
+              .user(currentUser)
+              .startTime(startTime)
+              .endTime(endTime)
+              .color("CCD7E5") // 색상 고정
+              .build();
 
-    return new uCalResponseDto(userCalendar);
+      calendars.add(userCalRepository.save(userCalendar));
+    }
+
+    return calendars.stream().map(uCalResponseDto::new).collect(Collectors.toList());
   }
 
-  // 일반 스케쥴 수정
+  // 일정 수정
   @Transactional
-  public uCalResponseDto edit(Long scheduleId, uCalSaveRequestDto requestDto, User currentUser) {
+  public List<uCalResponseDto> edit(Long scheduleId, uCalRequestDto requestDto, User currentUser) {
     UserCalendar userCalendar =
         userCalRepository
             .findById(scheduleId)
             .orElseThrow(() -> new CustomException(ErrorCode.SCHEDULE_NOT_FOUND));
 
-    // 작성자인지 체크
+    // 작성자 확인
     validateUser(userCalendar, currentUser);
 
-    // AM/PM 시간을 LocalDateTime으로 변환
-    LocalDateTime startTime = requestDto.getStartTime(); // 변환된 startTime
-    LocalDateTime endTime = requestDto.getEndTime(); // 변환된 endTime
+    List<LocalDate> dates = requestDto.getDate();
 
-    // 일정 수정
-    userCalendar.update(scheduleId, requestDto.getTitle(), startTime, endTime);
+    // 일정 수정 처리
+    for (LocalDate date : dates) {
+      LocalDateTime startTime =
+          convertToLocalDateTime(
+              date,
+              requestDto.getAmPmStart(),
+              requestDto.getStartHour(),
+              requestDto.getStartMinute());
+      LocalDateTime endTime =
+          convertToLocalDateTime(
+              date, requestDto.getAmPmEnd(), requestDto.getEndHour(), requestDto.getEndMinute());
 
-    return new uCalResponseDto(userCalendar);
+      userCalendar.update(scheduleId, requestDto.getTitle(), startTime, endTime);
+    }
+
+    return List.of(new uCalResponseDto(userCalendar));
   }
 
-  // 개인 일반 스케줄 삭제 (hard delete)
-  @Transactional
-  public uCalResponseDto deleteById(Long id, User currentUser) {
-    UserCalendar userCalendar =
-        userCalRepository
-            .findById(id)
-            .orElseThrow(() -> new CustomException(ErrorCode.SCHEDULE_NOT_FOUND));
-
-    // 작성자인지 체크
-    validateUser(userCalendar, currentUser);
-
-    userCalRepository.delete(userCalendar);
-    return new uCalResponseDto(userCalendar);
+  // 작성자 검증 로직
+  private void validateUser(UserCalendar userCalendar, User currentUser) {
+    log.info(
+        "userCalendar 작성자: {}, 현재 사용자: {}",
+        userCalendar.getUser().getLoginId(),
+        currentUser.getLoginId());
+    if (!userCalendar.getUser().getLoginId().equals(currentUser.getLoginId())) {
+      throw new CustomException(ErrorCode.UNAUTHORIZED_ACCESS);
+    }
   }
 
   // 개인 스케줄 월별 조회 (3개까지만 조회)
@@ -102,30 +122,20 @@ public class UserCalService {
     return scheduleList.stream().map(uCalResponseDto::new).collect(Collectors.toList());
   }
 
-  // 고정 스케줄 메모 등록 (추가)
-  /*
+  // 개인 일반 스케줄 삭제 (hard delete)
   @Transactional
-  public void addMemo(Long scheduleId, String memo, User currentUser) {
-      UserCalendar userCalendar = userCalRepository.findById(scheduleId)
-              .orElseThrow(() -> new CustomException(ErrorCode.SCHEDULE_NOT_FOUND));
+  public uCalResponseDto deleteById(Long id, User currentUser) {
+    UserCalendar userCalendar =
+        userCalRepository
+            .findById(id)
+            .orElseThrow(() -> new CustomException(ErrorCode.SCHEDULE_NOT_FOUND));
 
-      validateUser(userCalendar, currentUser);
-      userCalendar.addMemo(memo); // 메모 추가
+    // 작성자인지 체크
+    validateUser(userCalendar, currentUser);
+
+    userCalRepository.delete(userCalendar);
+    return new uCalResponseDto(userCalendar);
   }
-   */
-
-  //  // 카테고리별 스케줄 조회
-  //  @Transactional
-  //  public List<uCalResponseDto> viewByCategory(Long categoryId, User currentUser) {
-  //    Category category =
-  //        categoryRepository
-  //            .findById(categoryId)
-  //            .orElseThrow(() -> new CustomException(ErrorCode.CATEGORY_NOT_FOUND));
-  //
-  //    List<UserCalendar> scheduleList =
-  //        userCalRepository.findByCategoryAndUser(category, currentUser);
-  //    return scheduleList.stream().map(uCalResponseDto::new).collect(Collectors.toList());
-  //  }
 
   // 개인 스케줄 검색 기능
   @Transactional
@@ -133,18 +143,6 @@ public class UserCalService {
     List<UserCalendar> scheduleList =
         userCalRepository.findByTitleContainingAndUserAndDeletedFalse(keyword, currentUser);
     return scheduleList.stream().map(uCalResponseDto::new).collect(Collectors.toList());
-  }
-
-  // 작성자 검증 메서드
-  private void validateUser(UserCalendar userCalendar, User currentUser) {
-    log.info(
-        "userCalendar 작성자: {}, 현재 사용자: {}",
-        userCalendar.getUser().getLoginId(),
-        currentUser.getLoginId());
-
-    if (!userCalendar.getUser().getLoginId().equals(currentUser.getLoginId())) {
-      throw new CustomException(ErrorCode.UNAUTHORIZED_ACCESS); // 권한 없음 예외 처리
-    }
   }
 
   // 연도와 월 검증 및 기본값 설정
@@ -156,5 +154,14 @@ public class UserCalService {
     month = (month <= 0 || month > 12) ? currentMonth : month;
 
     return new int[] {year, month};
+  }
+
+  private LocalDateTime convertToLocalDateTime(LocalDate date, String amPm, int hour, int minute) {
+    if ("PM".equalsIgnoreCase(amPm) && hour < 12) {
+      hour += 12;
+    } else if ("AM".equalsIgnoreCase(amPm) && hour == 12) {
+      hour = 0;
+    }
+    return date.atTime(hour, minute, 0, 0); // LocalDate와 시간을 결합하여 LocalDateTime 생성
   }
 }
