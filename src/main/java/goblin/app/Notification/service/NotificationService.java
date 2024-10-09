@@ -296,8 +296,8 @@ public class NotificationService {
     dto.setDetails1(period);
     dto.setDetails2(duration);
     dto.setType(NotificationType.EVENT_CREATED); // 알림 유형 설정
-    dto.setCalendarId(calendarId);
-    dto.setGroupId(groupEvent.getId());
+    dto.setCalendarId(groupEvent.getId());
+    dto.setGroupId(groupEvent.getGroup().getGroupId());
 
     // 그룹 캘린더 참가자 목록
     List<GroupCalendarParticipant> participants =
@@ -332,8 +332,8 @@ public class NotificationService {
     dto.setDetails1(period);
     dto.setDetails2(duration);
     dto.setType(NotificationType.MUST_FIX_EVENT); // 알림 유형 설정
-    dto.setCalendarId(calendarId);
-    dto.setGroupId(groupEvent.getId());
+    dto.setCalendarId(groupEvent.getId());
+    dto.setGroupId(groupEvent.getGroup().getGroupId());
     // 알림 생성 및 저장
     Notification notification = notificationRepository.save(dto.ToEntity(creator));
     // SseEmitter를 통해 사용자에게 알림 전송
