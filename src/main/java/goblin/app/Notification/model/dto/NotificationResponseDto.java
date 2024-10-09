@@ -14,6 +14,8 @@ public class NotificationResponseDto {
   private String details1;
   private String details2;
   private String type;
+  private Long calendarId;
+  private Long groupId;
 
   public NotificationResponseDto(Notification notification) {
     this.id = notification.getId();
@@ -22,5 +24,7 @@ public class NotificationResponseDto {
     this.details1 = notification.getDetails1();
     this.details2 = notification.getDetails2();
     this.type = notification.getType().name();
+    this.calendarId = notification.getCalendarId();
+    this.groupId = notification.getGroupId();
   }
 }

@@ -17,30 +17,10 @@ import org.springframework.stereotype.Service;
 import goblin.app.Calendar.model.dto.request.uCalRequestDto;
 import goblin.app.Calendar.service.UserCalService;
 import goblin.app.FixedSchedule.repository.FixedScheduleRepository;
-import goblin.app.Group.model.dto.AvailableTimeRequestDTO;
-import goblin.app.Group.model.dto.AvailableTimeSlot;
-import goblin.app.Group.model.dto.ConfirmTimeRangeRequest;
-import goblin.app.Group.model.dto.GroupCalendarRequestDTO;
-import goblin.app.Group.model.dto.GroupCalendarResponseDTO;
-import goblin.app.Group.model.dto.GroupConfirmedCalendarDTO;
-import goblin.app.Group.model.dto.GroupMemberResponseDTO;
-import goblin.app.Group.model.dto.GroupParticipantResponseDTO;
-import goblin.app.Group.model.dto.GroupResponseDto;
-import goblin.app.Group.model.dto.SelectedDateTimeDTO;
-import goblin.app.Group.model.dto.TimeRange;
-import goblin.app.Group.model.dto.TimeSlot;
-import goblin.app.Group.model.entity.AvailableTime;
-import goblin.app.Group.model.entity.Group;
-import goblin.app.Group.model.entity.GroupCalendar;
-import goblin.app.Group.model.entity.GroupCalendarParticipant;
-import goblin.app.Group.model.entity.GroupMember;
+import goblin.app.Group.model.dto.*;
+import goblin.app.Group.model.entity.*;
 import goblin.app.Group.model.entity.OptimalTimeSlot;
-import goblin.app.Group.repository.AvailableTimeRepository;
-import goblin.app.Group.repository.GroupCalendarParticipantRepository;
-import goblin.app.Group.repository.GroupCalendarRepository;
-import goblin.app.Group.repository.GroupMemberRepository;
-import goblin.app.Group.repository.GroupRepository;
-import goblin.app.Group.repository.OptimalTimeSlotRepository;
+import goblin.app.Group.repository.*;
 import goblin.app.Notification.service.NotificationService;
 import goblin.app.User.model.entity.User;
 import goblin.app.User.repository.UserRepository;
@@ -54,6 +34,7 @@ public class GroupService {
   private final GroupMemberRepository groupMemberRepository;
   private final GroupCalendarRepository groupCalendarRepository;
   private final GroupCalendarParticipantRepository groupCalendarParticipantRepository;
+  private final GroupConfirmedCalendarRepository groupConfirmedCalendarRepository;
   private final UserRepository userRepository;
   private final AvailableTimeRepository availableTimeRepository;
   private final OptimalTimeSlotRepository optimalTimeSlotRepository;
@@ -598,7 +579,16 @@ public class GroupService {
     groupCalendar.setEndTime(selectedEndTime.toLocalTime());
     groupCalendar.setConfirmed(true);
 
-    groupCalendarRepository.save(groupCalendar);
+    GroupConfirmedCalendarRequestDTO confirmedCalendarDTO = new GroupConfirmedCalendarRequestDTO();
+    confirmedCalendarDTO.setGroupId(groupCalendar.getGroup().getGroupId());
+    confirmedCalendarDTO.setCalendarId(calendarId);
+    confirmedCalendarDTO.setStartDateTime(selectedStartTime);
+    confirmedCalendarDTO.setEndDateTime(selectedEndTime);
+    confirmedCalendarDTO.setTitle(groupCalendar.getTitle());
+    confirmedCalendarDTO.setNote(groupCalendar.getNote());
+    confirmedCalendarDTO.setPlace(groupCalendar.getPlace());
+    GroupConfirmedCalendar groupConfirmedCalendar =
+        groupConfirmedCalendarRepository.save(confirmedCalendarDTO.toEntity());
     log.info("그룹 캘린더 저장 성공. calendarId: {}", calendarId);
 
     // 개인 캘린더에 일정 저장 로직
@@ -666,19 +656,24 @@ public class GroupService {
             .orElseThrow(() -> new RuntimeException("그룹을 찾을 수 없습니다: groupId=" + groupId));
 
     // 조회한 Group 객체와 함께 일정 정보를 조회
-    GroupCalendar calendar =
-        groupCalendarRepository
-            .findByIdAndGroupAndConfirmed(calendarId, group, true) // 확정된 일정만 조회
+    GroupConfirmedCalendar calendar =
+        groupConfirmedCalendarRepository
+            .findByGroupIdAndCalendarId(groupId, calendarId)
             .orElseThrow(() -> new RuntimeException("확정된 일정을 찾을 수 없습니다: calendarId=" + calendarId));
 
     // 확정된 일정의 날짜 정보를 가져오기
-    LocalDate confirmedDate = calendar.getSelectedDates().get(0); // 첫 번째 날짜 사용
-    LocalDateTime startDateTime = confirmedDate.atTime(calendar.getStartTime());
-    LocalDateTime endDateTime = confirmedDate.atTime(calendar.getEndTime());
+    LocalDate confirmedDate = calendar.getConfirmedStartTime().toLocalDate();
+    LocalDateTime startDateTime = calendar.getConfirmedStartTime();
+    LocalDateTime endDateTime = calendar.getConfirmedEndTime();
 
     // GroupConfirmedCalendarDTO로 변환하여 반환
     return new GroupConfirmedCalendarDTO(
-        startDateTime, endDateTime, calendar.getTitle(), calendar.getPlace(), calendar.getNote());
+        confirmedDate,
+        startDateTime,
+        endDateTime,
+        calendar.getTitle(),
+        calendar.getPlace(),
+        calendar.getNote());
   }
 
   // 그룹 멤버 리스트 조회 메서드

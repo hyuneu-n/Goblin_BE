@@ -35,6 +35,10 @@ public class Notification {
   @Column(name = "is_deleted", nullable = false)
   private Boolean isDeleted = false;
 
+  Long calendarId;
+
+  Long groupId;
+
   @Builder
   public Notification(
       Long id,
@@ -43,7 +47,9 @@ public class Notification {
       String details1,
       String details2,
       User user,
-      NotificationType type) {
+      NotificationType type,
+      Long calendarId,
+      Long groupId) {
     this.id = id;
     this.msgTitle = msgTitle;
     this.eventName = eventName;
@@ -51,5 +57,7 @@ public class Notification {
     this.details2 = details2;
     this.user = user;
     this.type = type;
+    this.calendarId = calendarId;
+    this.groupId = groupId;
   }
 }
