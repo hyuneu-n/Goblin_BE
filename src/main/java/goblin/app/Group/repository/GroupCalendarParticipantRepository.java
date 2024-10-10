@@ -28,4 +28,6 @@ public interface GroupCalendarParticipantRepository
   @Query(
       "SELECT COUNT(DISTINCT p.user) FROM GroupCalendarParticipant p WHERE p.calendarId = :calendarId")
   Long countUsersByCalendarId(@Param("calendarId") Long calendarId);
+
+
 }

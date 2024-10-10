@@ -128,6 +128,12 @@ public class GroupService {
             .findByLoginId(loginId)
             .orElseThrow(() -> new RuntimeException("해당 로그인 ID를 가진 사용자를 찾을 수 없습니다: " + loginId));
 
+    // 이미 그룹 멤버인지 확인
+    boolean isMember = groupMemberRepository.existsByGroupIdAndUser(groupId, user);
+    if (isMember) {
+      throw new RuntimeException("사용자는 이미 그룹의 멤버입니다: loginId=" + loginId);
+    }
+
     // 그룹 멤버로 추가
     GroupMember groupMember = new GroupMember();
     groupMember.setUser(user);
@@ -137,6 +143,13 @@ public class GroupService {
 
     log.info("멤버 초대 완료: 그룹ID - {}, 초대된 사용자 - {}", groupId, loginId);
   }
+
+  public boolean isMemberOfGroup(Long groupId, String loginId) {
+    User user = userRepository.findByLoginId(loginId)
+            .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다: loginId = " + loginId));
+    return groupMemberRepository.existsByGroupIdAndUser(groupId, user);
+  }
+
 
   // 그룹 일정 등록 로직
   public void createGroupEvent(
