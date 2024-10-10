@@ -145,6 +145,7 @@ public class GroupController {
     }
   }
 
+  // 상세조회
   @Operation(summary = "확정된 일정 조회", description = "확정된 일정을 조회")
   @GetMapping("/{groupId}/calendar/{calendarId}/confirmed")
   public ResponseEntity<?> getConfirmedCalendar(
@@ -181,6 +182,49 @@ public class GroupController {
     // 서비스에서 그룹별 확정된 일정을 가져와서 DTO 리스트로 반환
     List<GroupConfirmedCalendarDTO> confirmedCalendars =
         groupService.getConfirmedCalendarsByGroup(groupId);
+    return ResponseEntity.ok(confirmedCalendars);
+  }
+
+  @Operation(summary = "그룹별 월별 확정 일정 조회", description = "그룹에 속한 일정 중 특정 월에 해당하는 확정 일정을 조회")
+  @GetMapping("/{groupId}/calendars/confirmed/month")
+  public ResponseEntity<?> getConfirmedCalendarsByGroupAndMonth(
+      @PathVariable Long groupId,
+      @RequestParam int year,
+      @RequestParam int month,
+      @RequestHeader(value = "Authorization", required = true) String bearerToken) {
+
+    String loginId = extractLoginId(bearerToken);
+
+    // 그룹에 속해 있는지 확인
+    if (!groupService.isUserInGroup(groupId, loginId)) {
+      return ResponseEntity.status(HttpStatus.FORBIDDEN).body("해당 그룹의 멤버가 아닙니다.");
+    }
+
+    // 서비스에서 그룹별 특정 월의 확정된 일정을 가져와서 DTO 리스트로 반환
+    List<GroupConfirmedCalendarDTO> confirmedCalendars =
+        groupService.getConfirmedCalendarsByGroupAndMonth(groupId, year, month);
+    return ResponseEntity.ok(confirmedCalendars);
+  }
+
+  @Operation(summary = "확정된 일정 일별 조회", description = "확정된 일정을 일별로 조회")
+  @GetMapping("/{groupId}/calendars/confirmed/day")
+  public ResponseEntity<?> getConfirmedCalendarsByDay(
+      @PathVariable Long groupId,
+      @RequestParam int year,
+      @RequestParam int month,
+      @RequestParam int day,
+      @RequestHeader(value = "Authorization", required = true) String bearerToken) {
+
+    String loginId = extractLoginId(bearerToken);
+
+    // 그룹에 속해 있는지 확인
+    if (!groupService.isUserInGroup(groupId, loginId)) {
+      return ResponseEntity.status(HttpStatus.FORBIDDEN).body("해당 그룹의 멤버가 아닙니다.");
+    }
+
+    // 서비스에서 그룹별 특정 날짜의 확정된 일정을 가져와서 DTO 리스트로 반환
+    List<GroupConfirmedCalendarDTO> confirmedCalendars =
+        groupService.getConfirmedCalendarsByGroupAndDay(groupId, year, month, day);
     return ResponseEntity.ok(confirmedCalendars);
   }
 

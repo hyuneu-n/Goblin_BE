@@ -681,7 +681,7 @@ public class GroupService {
     // 조회한 Group 객체와 함께 일정 정보를 조회
     GroupConfirmedCalendar calendar =
         groupConfirmedCalendarRepository
-                .findByGroupIdAndCalendarId(groupId, calendarId)
+            .findByGroupIdAndCalendarId(groupId, calendarId)
             .orElseThrow(() -> new RuntimeException("확정된 일정을 찾을 수 없습니다: calendarId=" + calendarId));
 
     // GroupConfirmedCalendarDTO로 변환하여 반환
@@ -796,5 +796,39 @@ public class GroupService {
   @Transactional
   public Group getOrCreatePersonalGroup(User user) {
     return groupHelper.getOrCreatePersonalGroup(user);
+  }
+
+  // 그룹별 월별 확정 일정 조회
+  public List<GroupConfirmedCalendarDTO> getConfirmedCalendarsByGroupAndMonth(
+      Long groupId, int year, int month) {
+    // groupId로 Group 객체 조회
+    Group group =
+        groupRepository
+            .findById(groupId)
+            .orElseThrow(() -> new RuntimeException("그룹을 찾을 수 없습니다: groupId=" + groupId));
+
+    // 해당 그룹의 특정 연월에 속하는 확정된 일정 조회
+    List<GroupConfirmedCalendar> calendars =
+        groupConfirmedCalendarRepository.findAllByGroupIdAndMonth(groupId, year, month);
+
+    // GroupConfirmedCalendarDTO 리스트로 변환하여 반환
+    return calendars.stream().map(GroupConfirmedCalendarDTO::new).collect(Collectors.toList());
+  }
+
+  // 그룹별 일별 확정 일정 조회
+  public List<GroupConfirmedCalendarDTO> getConfirmedCalendarsByGroupAndDay(
+      Long groupId, int year, int month, int day) {
+    // 먼저 groupId로 Group 객체를 조회
+    Group group =
+        groupRepository
+            .findById(groupId)
+            .orElseThrow(() -> new RuntimeException("그룹을 찾을 수 없습니다: groupId=" + groupId));
+
+    // 해당 그룹의 특정 날짜에 속하는 확정된 일정 조회
+    List<GroupConfirmedCalendar> calendars =
+        groupConfirmedCalendarRepository.findAllByGroupIdAndDay(groupId, year, month, day);
+
+    // GroupConfirmedCalendarDTO 리스트로 변환하여 반환
+    return calendars.stream().map(GroupConfirmedCalendarDTO::new).collect(Collectors.toList());
   }
 }
