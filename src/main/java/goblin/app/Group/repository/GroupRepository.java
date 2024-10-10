@@ -28,4 +28,7 @@ public interface GroupRepository extends JpaRepository<Group, Long> {
   Optional<Group> findByGroupName(String groupName);
 
   Optional<Group> findByGroupNameAndCreatedBy(String groupName, User createdBy);
+
+  // 그룹명과 생성자로 그룹 존재 여부 확인
+  boolean existsByGroupNameAndCreatedBy(String groupName, User createdBy);
 }

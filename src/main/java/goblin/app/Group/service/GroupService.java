@@ -54,6 +54,11 @@ public class GroupService {
             .findByLoginId(loginId)
             .orElseThrow(() -> new RuntimeException("유저를 찾을 수 없습니다: loginId=" + loginId));
 
+    // "개인" 그룹 중복 체크
+    if ("개인".equals(groupName) && groupRepository.existsByGroupNameAndCreatedBy("개인", user)) {
+      throw new RuntimeException("해당 유저는 이미 '개인' 그룹을 가지고 있습니다.");
+    }
+
     // 그룹명 중복 체크
     if (groupRepository.existsByGroupName(groupName)) {
       throw new RuntimeException("이미 존재하는 그룹명입니다: groupName=" + groupName);

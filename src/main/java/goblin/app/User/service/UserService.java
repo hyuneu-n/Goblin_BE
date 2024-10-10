@@ -21,7 +21,7 @@ import goblin.app.Common.exception.CustomValidationException;
 import goblin.app.Group.model.entity.Group;
 import goblin.app.Group.model.entity.GroupMember;
 import goblin.app.Group.repository.GroupMemberRepository;
-import goblin.app.Group.service.GroupService;
+import goblin.app.Group.repository.GroupRepository;
 import goblin.app.User.model.dto.UserRegistrationResponseDTO;
 import goblin.app.User.model.dto.UserSearchResponseDTO;
 import goblin.app.User.model.entity.User;
@@ -35,7 +35,7 @@ public class UserService implements UserDetailsService {
   private final UserRepository userRepository;
   private final PasswordEncoder passwordEncoder;
   private final JwtUtil jwtUtil;
-  private final GroupService groupService;
+  private final GroupRepository groupRepository;
   private final GroupMemberRepository groupMemberRepository;
 
   // 회원가입 비지니스 로직
@@ -72,21 +72,27 @@ public class UserService implements UserDetailsService {
     user.setUsername(username);
 
     // User 정보 DB에 저장
+    // 새로운 사용자 저장
     User savedUser = userRepository.save(user);
-    log.info("회원가입 성공: 사용자 ID - {}, 닉네임 - {}", savedUser.getLoginId(), savedUser.getUsername());
 
-    // "개인" 그룹 자동 생성
-    Group personalGroup = groupService.getOrCreatePersonalGroup(savedUser);
+    // "개인" 그룹이 이미 존재하는지 확인 후 없으면 생성
+    Group personalGroup =
+        groupRepository
+            .findByGroupNameAndCreatedBy("개인", savedUser)
+            .orElseGet(
+                () -> {
+                  Group newGroup = new Group();
+                  newGroup.setGroupName("개인");
+                  newGroup.setCreatedBy(savedUser);
+                  return groupRepository.save(newGroup);
+                });
 
     // 그룹과 사용자 연결 (GroupMember 생성)
     GroupMember groupMember = new GroupMember();
     groupMember.setUser(savedUser);
     groupMember.setGroupId(personalGroup.getGroupId());
-    groupMember.setRole("USER"); // 기본 역할 설정
+    groupMember.setRole("USER");
     groupMemberRepository.save(groupMember);
-
-    log.info(
-        "개인 그룹 생성 완료: 그룹명 - {}, 그룹장 - {}", personalGroup.getGroupName(), savedUser.getLoginId());
 
     // 응답 DTO 생성 및 반환
     return new UserRegistrationResponseDTO(
@@ -97,18 +103,25 @@ public class UserService implements UserDetailsService {
     return !userRepository.findByLoginId(loginId).isPresent();
   }
 
-  // 로그인 로직
   public String loginUser(String loginId, String password) {
+    // 1. 유저 정보 가져오기
     User user =
         userRepository
             .findByLoginId(loginId)
             .orElseThrow(() -> new RuntimeException("Invalid login ID or password"));
 
+    // 2. 비밀번호 확인
     if (!passwordEncoder.matches(password, user.getLoginPw())) {
-      log.warn("로그인 실패: 잘못된 비밀번호 - 사용자 ID {}", loginId);
       throw new RuntimeException("Invalid login ID or password");
     }
 
+    // 3. "개인" 그룹 가져오기 - createdBy가 현재 로그인하는 유저인 그룹을 찾음
+    Group personalGroup =
+        groupRepository
+            .findByGroupNameAndCreatedBy("개인", user)
+            .orElseThrow(() -> new RuntimeException("개인 그룹을 찾을 수 없습니다."));
+
+    // 4. JWT 토큰 생성 및 반환
     return jwtUtil.createAccessToken(user.getLoginId(), user.getUsername(), user.getUserRole());
   }
 
