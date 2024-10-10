@@ -438,6 +438,7 @@ public class GroupController {
     // 초대 링크 토큰 생성
     String inviteToken = inviteTokenService.generateInviteToken(groupId);
 
+
     // 초대 링크 반환
     String inviteLink = "http://gooblin.shop/invite?token=" + inviteToken;
     return ResponseEntity.ok(inviteLink);
@@ -456,6 +457,11 @@ public class GroupController {
 
     // 토큰 유효성 확인 및 그룹 ID 추출
     Long groupId = inviteTokenService.validateInviteToken(token);
+
+    // 이미 가입된 멤버인지 확인
+    if (groupService.isMemberOfGroup(groupId, loginId)) {
+      return ResponseEntity.status(HttpStatus.CONFLICT).body("이미 그룹에 가입된 사용자입니다.");
+    }
 
     // 그룹에 멤버 추가
     groupService.inviteMember(groupId, loginId);
