@@ -145,11 +145,12 @@ public class GroupService {
   }
 
   public boolean isMemberOfGroup(Long groupId, String loginId) {
-    User user = userRepository.findByLoginId(loginId)
+    User user =
+        userRepository
+            .findByLoginId(loginId)
             .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다: loginId = " + loginId));
     return groupMemberRepository.existsByGroupIdAndUser(groupId, user);
   }
-
 
   // 그룹 일정 등록 로직
   public void createGroupEvent(
@@ -828,6 +829,24 @@ public class GroupService {
     return calendars.stream().map(GroupConfirmedCalendarDTO::new).collect(Collectors.toList());
   }
 
+  @Transactional
+  // 그룹 일정 번호별 조회
+  public GroupCalendarResponseDTO getGroupCalendarById(Long groupId, Long calendarId) {
+    // 그룹 존재 여부 확인
+    Group group =
+        groupRepository
+            .findById(groupId)
+            .orElseThrow(() -> new RuntimeException("그룹을 찾을 수 없습니다: groupId=" + groupId));
+
+    // 일정 존재 여부 확인
+    GroupCalendar calendar =
+        groupCalendarRepository
+            .findByGroupIdAndCalendarId(groupId, calendarId)
+            .orElseThrow(() -> new RuntimeException("일정을 찾을 수 없습니다: calendarId=" + calendarId));
+
+    // DTO로 변환 후 반환
+    return new GroupCalendarResponseDTO(calendar);
+  }
   // 그룹별 일별 확정 일정 조회
   public List<GroupConfirmedCalendarDTO> getConfirmedCalendarsByGroupAndDay(
       Long groupId, int year, int month, int day) {

@@ -299,6 +299,31 @@ public class GroupController {
     }
   }
 
+  // 그룹 일정 번호별 조회
+  @Operation(summary = "그룹 일정 번호별 조회", description = "그룹에서 특정 일정 ID로 확정일정 아닌 일정을 조회하는 API")
+  @GetMapping("/{groupId}/calendar/{calendarId}")
+  public ResponseEntity<?> getGroupCalendarById(
+      @PathVariable Long groupId,
+      @PathVariable Long calendarId,
+      @RequestHeader(value = "Authorization", required = true) String bearerToken) {
+    try {
+      // 토큰에서 loginId 추출
+      String loginId = extractLoginId(bearerToken);
+
+      // 사용자가 그룹에 속해 있는지 확인
+      if (!groupService.isUserInGroup(groupId, loginId)) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body("해당 그룹의 멤버가 아닙니다.");
+      }
+
+      // 특정 일정 ID로 그룹 일정 조회
+      GroupCalendarResponseDTO event = groupService.getGroupCalendarById(groupId, calendarId);
+      return ResponseEntity.ok(event);
+    } catch (RuntimeException e) {
+      log.error("그룹 일정 조회 실패: {}", e.getMessage());
+      return ResponseEntity.badRequest().body(e.getMessage());
+    }
+  }
+
   private String extractLoginId(String bearerToken) {
     if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
       String token = bearerToken.substring(7);
@@ -437,7 +462,6 @@ public class GroupController {
 
     // 초대 링크 토큰 생성
     String inviteToken = inviteTokenService.generateInviteToken(groupId);
-
 
     // 초대 링크 반환
     String inviteLink = "http://gooblin.shop/invite?token=" + inviteToken;
