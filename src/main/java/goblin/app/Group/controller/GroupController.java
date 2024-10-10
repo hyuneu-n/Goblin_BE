@@ -461,7 +461,7 @@ public class GroupController {
     return ResponseEntity.ok(emitter);
   }
 
-  // 확정되지 않은 일정 조회
+  // 확정되지 않은 일정 ID로 조회
   @Operation(summary = "확정되지 않은 일정 Id로 조회", description = "calendarId를 사용하여 일정을 조회합니다.")
   @GetMapping("/calendar/{calendarId}")
   public ResponseEntity<GroupCalendarResponseDTO> getCalendar(
@@ -476,7 +476,7 @@ public class GroupController {
     return ResponseEntity.ok(calendar);
   }
 
-  // 그룹 확정되지 않은 일정 조회
+  // 그룹 확정 일정 ID로 조회
   @Operation(summary = "확정된 일정 Id로 조회", description = "calendarId를 사용하여 일정을 조회합니다.")
   @GetMapping("/calendar/confirmed/{calendarId}")
   public ResponseEntity<GroupConfirmedCalendarDTO> getConfirmedCalendar(
@@ -485,7 +485,7 @@ public class GroupController {
 
     String loginId = extractLoginId(bearerToken);
 
-    GroupConfirmedCalendarDTO calendar = groupService.getConfirmedCalendar(calendarId);
+    GroupConfirmedCalendarDTO calendar = groupService.getConfirmedCalendarById(calendarId);
 
     return ResponseEntity.ok(calendar);
   }

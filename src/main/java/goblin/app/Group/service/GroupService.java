@@ -385,6 +385,7 @@ public class GroupService {
             .orElseThrow(() -> new RuntimeException("참여자를 찾을 수 없습니다."));
     participant.setAvailableTimeSubmitted(true); // 제출 완료 상태로 변경
     groupCalendarParticipantRepository.save(participant);
+    // 제출 여부를 확인, 모두 제출 시 알림
     if (haveAllUsersSubmittedAvailableTime(calendarId)) {
       notificationService.eventSelectedNotify(calendarId);
     }
@@ -643,13 +644,8 @@ public class GroupService {
     // 조회한 Group 객체와 함께 일정 정보를 조회
     GroupConfirmedCalendar calendar =
         groupConfirmedCalendarRepository
-            .findByGroupIdAndCalendarId(groupId, calendarId)
+                .findByGroupIdAndCalendarId(groupId, calendarId)
             .orElseThrow(() -> new RuntimeException("확정된 일정을 찾을 수 없습니다: calendarId=" + calendarId));
-
-    // 확정된 일정의 날짜 정보를 가져오기
-    LocalDate confirmedDate = calendar.getConfirmedStartTime().toLocalDate();
-    LocalDateTime startDateTime = calendar.getConfirmedStartTime();
-    LocalDateTime endDateTime = calendar.getConfirmedEndTime();
 
     // GroupConfirmedCalendarDTO로 변환하여 반환
     return new GroupConfirmedCalendarDTO(calendar);
@@ -736,7 +732,7 @@ public class GroupService {
 
   // 확정된 일정 calendarId로 조회
   @Transactional
-  public GroupConfirmedCalendarDTO getConfirmedCalendar(Long calendarId) {
+  public GroupConfirmedCalendarDTO getConfirmedCalendarById(Long calendarId) {
     GroupConfirmedCalendar calendar =
         groupConfirmedCalendarRepository
             .findById(calendarId)
