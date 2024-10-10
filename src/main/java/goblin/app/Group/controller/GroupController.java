@@ -12,6 +12,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import org.springframework.web.util.UriComponents;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import goblin.app.Group.model.dto.*;
 import goblin.app.Group.service.GroupService;
@@ -437,17 +439,20 @@ public class GroupController {
     String inviteToken = inviteTokenService.generateInviteToken(groupId);
 
     // 초대 링크 반환
-    String inviteLink = "http://localhost:8080//invite?token=" + inviteToken;
+    String inviteLink = "http://gooblin.shop/invite?token=" + inviteToken;
     return ResponseEntity.ok(inviteLink);
   }
 
   @Operation(summary = "초대 링크 처리", description = "초대 링크를 통해 그룹에 가입")
   @PostMapping("/join-by-invite")
   public ResponseEntity<?> joinGroupByInvite(
-      @RequestParam String token,
+      @RequestParam String inviteLink,
       @RequestHeader(value = "Authorization", required = true) String bearerToken) {
 
     String loginId = extractLoginId(bearerToken);
+
+    // 링크에서 토큰 추출
+    String token = extractTokenFromLink(inviteLink);
 
     // 토큰 유효성 확인 및 그룹 ID 추출
     Long groupId = inviteTokenService.validateInviteToken(token);
@@ -456,6 +461,11 @@ public class GroupController {
     groupService.inviteMember(groupId, loginId);
 
     return ResponseEntity.ok("그룹에 성공적으로 가입되었습니다.");
+  }
+
+  private String extractTokenFromLink(String inviteLink) {
+    UriComponents uriComponents = UriComponentsBuilder.fromUriString(inviteLink).build();
+    return uriComponents.getQueryParams().getFirst("token");
   }
 
   @Operation(summary = "그룹 일정 참가자 조회", description = "그룹의 일정에 참가한 사람들의 제출 여부 조회")
