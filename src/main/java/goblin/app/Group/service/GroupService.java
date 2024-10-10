@@ -863,6 +863,11 @@ public class GroupService {
     Group group =
         groupRepository.findById(groupId).orElseThrow(() -> new RuntimeException("그룹을 찾을 수 없습니다."));
 
+    // "개인" 그룹인지 확인하여 삭제 방지
+    if ("개인".equals(group.getGroupName())) {
+      throw new RuntimeException("개인 그룹은 삭제할 수 없습니다.");
+    }
+
     // 방장 여부 확인 로직 추가
     if (!group.getCreatedBy().getLoginId().equals(loginId)) {
       throw new RuntimeException("해당 그룹을 삭제할 권한이 없습니다.");
