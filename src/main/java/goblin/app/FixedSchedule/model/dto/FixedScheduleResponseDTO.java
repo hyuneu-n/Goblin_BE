@@ -21,6 +21,7 @@ public class FixedScheduleResponseDTO {
   private boolean isPublic;
   private String color;
   private Long groupId;
+  private String userName;
 
   public FixedScheduleResponseDTO(FixedSchedule schedule) {
     this.id = schedule.getId();
@@ -32,5 +33,6 @@ public class FixedScheduleResponseDTO {
     this.isPublic = schedule.isPublic();
     this.color = schedule.getColor();
     this.groupId = schedule.getGroup().getGroupId();
+    this.userName = schedule.getUser().getUsername();
   }
 }
