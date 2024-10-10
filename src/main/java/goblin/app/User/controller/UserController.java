@@ -14,6 +14,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import goblin.app.Common.exception.CustomValidationException;
+import goblin.app.Group.model.entity.Group;
+import goblin.app.Group.service.GroupService;
 import goblin.app.User.model.dto.AuthResponse;
 import goblin.app.User.model.dto.RefreshTokenRequest;
 import goblin.app.User.model.dto.UserLoginRequest;
@@ -35,6 +37,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 public class UserController {
   private final UserService userService;
   private final JwtUtil jwtUtil;
+  private final GroupService groupService;
 
   @Operation(summary = "회원가입", description = "새로운 사용자를 등록( 회원가입 )")
   @PostMapping("/register")
@@ -86,9 +89,14 @@ public class UserController {
       // 사용자 정보 가져오기 (닉네임 등)
       User user = userService.findUserByLoginId(request.getLoginId());
 
-      // 닉네임, 토큰 등 응답에 포함
+      // "개인" 그룹의 그룹 ID 가져오기
+      Group personalGroup = groupService.getOrCreatePersonalGroup(user);
+      Long personalGroupId = personalGroup.getGroupId();
+
+      // 닉네임, 토큰, 개인 그룹 ID 등 응답에 포함
       AuthResponse authResponse =
-          new AuthResponse(accessToken, refreshToken, user.getLoginId(), user.getUsername());
+          new AuthResponse(
+              accessToken, refreshToken, user.getLoginId(), user.getUsername(), personalGroupId);
       return ResponseEntity.ok(authResponse);
 
     } catch (RuntimeException e) {
