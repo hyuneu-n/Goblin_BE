@@ -145,11 +145,12 @@ public class GroupService {
   }
 
   public boolean isMemberOfGroup(Long groupId, String loginId) {
-    User user = userRepository.findByLoginId(loginId)
+    User user =
+        userRepository
+            .findByLoginId(loginId)
             .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다: loginId = " + loginId));
     return groupMemberRepository.existsByGroupIdAndUser(groupId, user);
   }
-
 
   // 그룹 일정 등록 로직
   public void createGroupEvent(

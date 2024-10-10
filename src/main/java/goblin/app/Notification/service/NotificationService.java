@@ -233,7 +233,7 @@ public class NotificationService {
     dto.setEventName(groupCalendar.getTitle());
     dto.setDetails1(fixedDate);
     dto.setDetails2(duration.toString());
-    dto.setType(NotificationType.EVENT_CREATED); // 알림 유형 설정
+    dto.setType(NotificationType.EVENT_FIXED); // 알림 유형 설정
     dto.setCalendarId(calendarId);
     dto.setGroupId(groupEvent.getId());
 

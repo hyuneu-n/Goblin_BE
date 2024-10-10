@@ -438,7 +438,6 @@ public class GroupController {
     // 초대 링크 토큰 생성
     String inviteToken = inviteTokenService.generateInviteToken(groupId);
 
-
     // 초대 링크 반환
     String inviteLink = "http://gooblin.shop/invite?token=" + inviteToken;
     return ResponseEntity.ok(inviteLink);
