@@ -669,7 +669,7 @@ public class GroupService {
     userCalService.save(requestDto, user);
   }
 
-  // 확정일정 조회
+  // 확정일정 조회(상세조회)
   public GroupConfirmedCalendarDTO getConfirmedCalendar(Long groupId, Long calendarId) {
     // 먼저 groupId로 Group 객체를 조회
     Group group =
@@ -690,6 +690,22 @@ public class GroupService {
 
     // GroupConfirmedCalendarDTO로 변환하여 반환
     return new GroupConfirmedCalendarDTO(calendar);
+  }
+
+  // 확정 일정 그룹별 조회 (전체 조회)
+  public List<GroupConfirmedCalendarDTO> getConfirmedCalendarsByGroup(Long groupId) {
+    // groupId로 Group 객체 조회
+    Group group =
+        groupRepository
+            .findById(groupId)
+            .orElseThrow(() -> new RuntimeException("그룹을 찾을 수 없습니다: groupId=" + groupId));
+
+    // 그룹에 속한 모든 확정된 일정 조회
+    List<GroupConfirmedCalendar> calendars =
+        groupConfirmedCalendarRepository.findAllByGroupId(groupId);
+
+    // GroupConfirmedCalendarDTO 리스트로 변환하여 반환
+    return calendars.stream().map(GroupConfirmedCalendarDTO::new).collect(Collectors.toList());
   }
 
   // 그룹 멤버 리스트 조회 메서드

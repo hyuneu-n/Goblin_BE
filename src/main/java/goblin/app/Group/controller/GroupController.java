@@ -165,6 +165,25 @@ public class GroupController {
     return ResponseEntity.ok(confirmedCalendar);
   }
 
+  @Operation(summary = "그룹별 확정된 일정 전체 조회", description = "그룹에 속한 모든 확정된 일정을 조회")
+  @GetMapping("/{groupId}/calendars/confirmed")
+  public ResponseEntity<?> getConfirmedCalendarsByGroup(
+      @PathVariable Long groupId,
+      @RequestHeader(value = "Authorization", required = true) String bearerToken) {
+
+    String loginId = extractLoginId(bearerToken);
+
+    // 그룹에 속해 있는지 확인
+    if (!groupService.isUserInGroup(groupId, loginId)) {
+      return ResponseEntity.status(HttpStatus.FORBIDDEN).body("해당 그룹의 멤버가 아닙니다.");
+    }
+
+    // 서비스에서 그룹별 확정된 일정을 가져와서 DTO 리스트로 반환
+    List<GroupConfirmedCalendarDTO> confirmedCalendars =
+        groupService.getConfirmedCalendarsByGroup(groupId);
+    return ResponseEntity.ok(confirmedCalendars);
+  }
+
   // 새로운 일정 확정 로직 (범위 내에서 시간 선택)
   @Operation(
       summary = "일정 최종 확정",

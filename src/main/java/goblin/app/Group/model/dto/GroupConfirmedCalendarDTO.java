@@ -13,8 +13,8 @@ public class GroupConfirmedCalendarDTO {
 
   private LocalDateTime startDateTime;
   private LocalDateTime endDateTime;
+  private LocalDate confirmedDate;
 
-  private LocalDate confirmedDate = startDateTime.toLocalDate();
   private String title;
   private String place;
   private String note;
@@ -29,6 +29,7 @@ public class GroupConfirmedCalendarDTO {
       String note) {
     this.startDateTime = startDateTime;
     this.endDateTime = endDateTime;
+    this.confirmedDate = confirmedDate;
     this.title = title;
     this.place = place;
     this.note = note;
@@ -41,5 +42,10 @@ public class GroupConfirmedCalendarDTO {
     this.title = calendar.getTitle();
     this.place = calendar.getPlace();
     this.note = calendar.getNote();
+
+    // startDateTime이 null이 아닌 경우에만 confirmedDate를 설정
+    if (this.startDateTime != null) {
+      this.confirmedDate = this.startDateTime.toLocalDate();
+    }
   }
 }
