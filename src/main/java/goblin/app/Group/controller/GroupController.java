@@ -351,19 +351,13 @@ public class GroupController {
   }
 
   // 그룹 삭제
-  @Operation(summary = "그룹 삭제", description = "그룹 삭제(방장만 가능)")
-  @DeleteMapping("/{groupId}")
-  public ResponseEntity<?> deleteGroup(
-      @PathVariable Long groupId,
-      @RequestHeader(value = "Authorization", required = true) String bearerToken) {
-    try {
-      String loginId = extractLoginId(bearerToken);
-      groupService.deleteGroup(groupId, loginId);
-      return ResponseEntity.ok("그룹이 삭제되었습니다.");
-    } catch (RuntimeException e) {
-      log.error("그룹 삭제 실패: {}", e.getMessage());
-      return ResponseEntity.badRequest().body(e.getMessage());
-    }
+  @Operation(summary = "그룹 삭제", description = "그룹삭제")
+  @DeleteMapping("/group/{groupId}")
+  public ResponseEntity<String> deleteGroup(
+      @PathVariable Long groupId, @RequestHeader("Authorization") String token) {
+    String loginId = extractLoginId(token); // JWT 토큰에서 로그인 ID 추출
+    groupService.deleteGroup(groupId, loginId);
+    return ResponseEntity.ok("그룹이 삭제되었습니다.");
   }
 
   // 그룹 멤버 삭제

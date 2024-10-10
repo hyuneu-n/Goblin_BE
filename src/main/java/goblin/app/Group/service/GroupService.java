@@ -377,13 +377,6 @@ public class GroupService {
     log.info("그룹명이 수정되었습니다: groupId = {}, groupName = {}", groupId, groupName);
   }
 
-  // 그룹 삭제 로직
-  public void deleteGroup(Long groupId, String loginId) {
-    Group group = validateGroupOwner(groupId, loginId);
-    groupRepository.delete(group);
-    log.info("그룹이 삭제되었습니다: groupId = {}", groupId);
-  }
-
   // 그룹 멤버 삭제 로직
   public void removeMember(Long groupId, String memberLoginId, String loginId) {
     // 그룹 소유자 검증 (방장이 맞는지 확인)
@@ -862,5 +855,30 @@ public class GroupService {
 
     // GroupConfirmedCalendarDTO 리스트로 변환하여 반환
     return calendars.stream().map(GroupConfirmedCalendarDTO::new).collect(Collectors.toList());
+  }
+
+  @Transactional
+  public void deleteGroup(Long groupId, String loginId) {
+    // 그룹을 조회하고 해당 유저가 그룹의 방장인지 확인
+    Group group =
+        groupRepository.findById(groupId).orElseThrow(() -> new RuntimeException("그룹을 찾을 수 없습니다."));
+
+    // 방장 여부 확인 로직 추가
+    if (!group.getCreatedBy().getLoginId().equals(loginId)) {
+      throw new RuntimeException("해당 그룹을 삭제할 권한이 없습니다.");
+    }
+
+    // 그룹에 속한 모든 일정을 soft delete 처리
+    groupCalendarRepository
+        .findAllByGroupId(groupId)
+        .forEach(
+            calendar -> {
+              groupCalendarRepository.softDeleteById(calendar.getId());
+            });
+
+    // 그룹도 soft delete 처리
+    group.setDeleted(true);
+    groupRepository.save(group);
+    log.info("일정이 삭제되었습니다");
   }
 }
