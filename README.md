@@ -1,8 +1,5 @@
 # Goblin
 
-![프로젝트 로고](./src/main/resources/img/logo.png)
-
-
 ## 👻 Goblin
 
 > 모두의 일정, 한눈에 뚝딱 정리!</br>
@@ -130,3 +127,7 @@
   <img src="https://github.com/user-attachments/assets/2bc96968-4cd5-4776-b2ad-5a38da6d2791" width="200">
   <img src="https://github.com/user-attachments/assets/c52ed416-f1f4-447f-b820-7559c22e6aa6" width="200">
 </p>
+
+https://github.com/user-attachments/assets/6eb703dd-843c-4f7d-b355-11aca40f7811
+
+
